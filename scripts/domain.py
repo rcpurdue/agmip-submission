@@ -28,7 +28,7 @@ class BadLabelInfo:
     A bad label is defined to be a label/field that does not follow the correct protocol but can be fixed
     automatically by the application
 
-    NOTE: Because we override the __hash__ method, this class is not completely safe to be used with hashtable-based 
+    NOTE: Because we override the __hash__ method, this class is not completely safe to be used with hashtable-based
     data structure
     @date Aug 5, 2021
     """
@@ -50,7 +50,7 @@ class BadLabelInfo:
         """ Override equality operator for convenience """
         if not isinstance(obj, BadLabelInfo):
             return False
-        return (self.label == obj.label) and (self.associated_column == obj.associated_column) and (self.fix == obj.fix) 
+        return (self.label == obj.label) and (self.associated_column == obj.associated_column) and (self.fix == obj.fix)
 
 
 class UnknownLabelInfo:
@@ -58,8 +58,8 @@ class UnknownLabelInfo:
     A domain entity to store information about an unknown label
     A bad label is defined to be a label/field that does not follow the correct protocol but can be fixed
     automatically by the application
-    
-    NOTE: Because we override the __hash__ method, this class is not completely safe to be used with hashtable-based 
+
+    NOTE: Because we override the __hash__ method, this class is not completely safe to be used with hashtable-based
     data structure
     @date Aug 5, 2021
     """
@@ -69,7 +69,7 @@ class UnknownLabelInfo:
         self.closest_match: str = closest_match
         self.fix: str = fix
         self.override: bool = override
-    
+
     def __hash__(self) -> int:
         """
         Override hash operation to make sure two objects with the same attribute values produces the same hash
@@ -90,12 +90,12 @@ class UnknownLabelInfo:
 
 
 class InputDataEntity:
-    """ 
+    """
     A domain entity that represents our input data/file
-    It stores information that is required for parsing the input data and transforming the data columns into the correct 
-    arrangement. It also provides several utilities to guess all this information and to get a preview of the parsed 
+    It stores information that is required for parsing the input data and transforming the data columns into the correct
+    arrangement. It also provides several utilities to guess all this information and to get a preview of the parsed
     input data.
-    
+
     @date Aug 5, 2021
     """
 
@@ -107,7 +107,7 @@ class InputDataEntity:
         self.header_is_included: bool = False
         self.scenarios_to_ignore: List[str] = []
         self._file_nrows = 0
-        # Input format specification attributes & file path which will only be accessed via properties 
+        # Input format specification attributes & file path which will only be accessed via properties
         # @date Aug 4, 2021
         self._file_path: Path = Path()
         self._delimiter: str = ""
@@ -115,18 +115,18 @@ class InputDataEntity:
         # Column assignment attributes
         self.scenario_colnum: int = 0   # colnum -> column number (1-based indexing)
         self.region_colnum: int = 0
-        self.variable_colnum: int = 0 
+        self.variable_colnum: int = 0
         self.item_colnum: int = 0
         self.unit_colnum: int = 0
         self.year_colnum: int = 0
         self.value_colnum: int = 0
         # Private attributes to help calculate sample parsed input data
-        # NOTE: The reason we keep track of the "topmost" sample and a "nonskipped" sample was to avoid loading the 
-        # whole file into memory. In retrospect, this is a premature optimization and could've been made 
-        # simpler.  
+        # NOTE: The reason we keep track of the "topmost" sample and a "nonskipped" sample was to avoid loading the
+        # whole file into memory. In retrospect, this is a premature optimization and could've been made
+        # simpler.
         # TODO: Simplify the operations that require these two sample attributes
         # @date Aug 5, 2021
-        self._input_data_topmost_sample: list[str] = []     # top X input data       
+        self._input_data_topmost_sample: list[str] = []     # top X input data
         self._input_data_nonskipped_sample: list[str] = []  # top X non-skipped input data
         self._sample_parsed_input_data_memo: Optional[list[list[str]]] = None
 
@@ -148,12 +148,12 @@ class InputDataEntity:
                 entity._input_data_topmost_sample = lines[: entity._NROWS_IN_SAMPLE_DATA]
                 entity._input_data_nonskipped_sample = (
                     lines[entity.initial_lines_to_skip: entity.initial_lines_to_skip + entity._NROWS_IN_SAMPLE_DATA]
-                    if entity.initial_lines_to_skip < entity._file_nrows 
+                    if entity.initial_lines_to_skip < entity._file_nrows
                     else []
                 )
         except:
             raise Exception("Error when opening file")
-        return entity 
+        return entity
 
     def guess_delimiter(self, valid_delimiters: list[str]) -> bool:
         """Guess the delimiter from the sample input data and update the value
@@ -361,19 +361,19 @@ class InputDataEntity:
         Model name = {self.model_name}
         Delimiter = {self.delimiter}
         Header is included = {self.header_is_included}
-        Scenario colnum = {self.scenario_colnum} 
-        Region colnum = {self.region_colnum} 
-        Variable colnum = {self.variable_colnum} 
-        Item colnum = {self.item_colnum} 
-        Unit colnum = {self.unit_colnum} 
-        Year colnum = {self.year_colnum} 
-        Value colnum = {self.value_colnum} 
+        Scenario colnum = {self.scenario_colnum}
+        Region colnum = {self.region_colnum}
+        Variable colnum = {self.variable_colnum}
+        Item colnum = {self.item_colnum}
+        Unit colnum = {self.unit_colnum}
+        Year colnum = {self.year_colnum}
+        Value colnum = {self.value_colnum}
         """
 
 
 class InputDataDiagnosis:
     """
-    A domain entity to represent an input data diagnosis. 
+    A domain entity to represent an input data diagnosis.
     This class stores diagnosis results and provides some diagnosis utility methods.
 
     TODO: Consider abstracting some functionalities in this class into a Factory class and a Service class
@@ -388,7 +388,7 @@ class InputDataDiagnosis:
     UNIT_COLNAME = "Unit"
     YEAR_COLNAME = "Year"
     VALUE_COLNAME = "Value"
-    # File destination paths for diagnosed rows 
+    # File destination paths for diagnosed rows
     STRUCTISSUEROWS_DSTPATH = _DOWNLOADDIR_PATH / "Rows With Structural Issue.csv"
     DUPLICATESROWS_DSTPATH = _DOWNLOADDIR_PATH / "Duplicate Records.csv"
     IGNOREDSCENARIOROWS_DSTPATH = _DOWNLOADDIR_PATH / "Records With An Ignored Scenario.csv"
@@ -414,13 +414,13 @@ class InputDataDiagnosis:
         self._largest_ncolumns = 0
         # - row occurrence dictionary for duplicate checking
         self._row_occurence_dict: Dict[str, int] = {}
-    
+
     def rediagnose_n_filter_output_data(self, output_entity: OutputDataEntity) -> bool:  # type: ignore
         """
-        Re-diagnose and filter output data and store the result in the appropriate file. Return whether or not new 
+        Re-diagnose and filter output data and store the result in the appropriate file. Return whether or not new
         issues were found after the re-diagnosis
 
-        Justification: If unknown variables or units were swapped with a valid label, their associated values were 
+        Justification: If unknown variables or units were swapped with a valid label, their associated values were
         never checked against the acceptable range. So, we want to check and filter them here.
         """
         has_new_issues = False
@@ -436,8 +436,8 @@ class InputDataDiagnosis:
             value_colidx = output_entity.processed_data.columns.tolist().index(output_entity.VALUE_COLNAME)
             unit_colidx = output_entity.processed_data.columns.tolist().index(output_entity.UNIT_COLNAME)
             for line in rows:
-                row = line.strip("\n ").split(",") 
-                if len(row) == 0: 
+                row = line.strip("\n ").split(",")
+                if len(row) == 0:
                     continue
                 value_field = row[value_colidx]
                 variable_field = row[variable_colidx]
@@ -461,7 +461,7 @@ class InputDataDiagnosis:
     def create(cls, input_entity: InputDataEntity) -> InputDataDiagnosis:
         """
         Create an return an instance of this class
-        
+
         To create the instance, we will diagnose the input data and populate the relevant attributes and files.
 
         In general, the diagnosis involves performing "row checks" on data rows and categorizing them as
@@ -475,8 +475,8 @@ class InputDataDiagnosis:
         1. "Bad" fields
         2. "Unknown" fields
         and log the result into the appropriate in-memory data structure.
-        
-        TODO: Reimplement this method with pandas for better performance (refer to the 
+
+        TODO: Reimplement this method with pandas for better performance (refer to the
         _diagnosed_data_with_pandas_attempt() for existing attempt)
         @date Aug 5, 2021
         """
@@ -503,7 +503,7 @@ class InputDataDiagnosis:
         value_colidx = input_entity.value_colnum - 1
         # Update private helper attributes
         diagnosis._update_ncolumns_info(input_entity)
-        # Open all row destination files 
+        # Open all row destination files
         # fmt: off
         with \
             open(str(input_entity.file_path), "r") as inputfile, \
@@ -542,7 +542,7 @@ class InputDataDiagnosis:
                 year_fields.add(row[year_colidx].strip(_quotes_and_space))
                 # Parse value
                 diagnosis._diagnose_value_field(row[value_colidx].strip(_quotes_and_space))
-        # Diagnose all found fields 
+        # Diagnose all found fields
         for scenario in scenario_fields:
             diagnosis._diagnose_scenario_field(scenario)
         for region in region_fields:
@@ -576,8 +576,8 @@ class InputDataDiagnosis:
             return True
         if self._check_if_duplicate_row(rownum, line, duplicatesfile):
             return True
-        return False 
-    
+        return False
+
     def _check_row_for_structural_issue(self, rownum: int, row: list[str], structissuefile: TextIOWrapper) -> bool:
         """
         Checks if a row has a structural issue and logs it into the file if it has.
@@ -633,14 +633,14 @@ class InputDataDiagnosis:
             # Get fixed value
             value_fix = DataRuleRepository.query_fix_from_value_fix_table(value_field)
             value_fix = value_fix if value_fix is not None else value_field
-            # Get matching variable 
+            # Get matching variable
             variable_field = row[self._input_entity.variable_colnum - 1]
             matching_variable = DataRuleRepository.query_matching_variable(variable_field)
             matching_variable = matching_variable if matching_variable is not None else variable_field
             # Get matching unit
             unit_field = row[self._input_entity.unit_colnum - 1]
             matching_unit = DataRuleRepository.query_matching_unit(unit_field)
-            matching_unit = matching_unit if matching_unit is not None else unit_field 
+            matching_unit = matching_unit if matching_unit is not None else unit_field
             # Get min/max value for the given variable and unit
             min_value = DataRuleRepository.query_variable_min_value(matching_variable, matching_unit)
             max_value = DataRuleRepository.query_variable_max_value(matching_variable, matching_unit)
@@ -728,7 +728,7 @@ class InputDataDiagnosis:
         # Known region but spelled wrongly
         elif (region_w_correct_case != region) and (region_w_correct_case is not None):
             self._log_bad_label(region, self.REGION_COLNAME, region_w_correct_case)
-        # Known bad region 
+        # Known bad region
         elif fixed_region is not None:
             self._log_bad_label(region, self.REGION_COLNAME, fixed_region)
 
@@ -766,7 +766,7 @@ class InputDataDiagnosis:
         """Check if a year is bad or unknown and logs it if it is"""
         # NOTE: This method assumes that rows with non-integer year value would have failed the row structural check,
         # so the following type-cast should never raise an error
-        int(year) 
+        int(year)
         if not DataRuleRepository.query_label_in_years(year):
             self.unknown_years.add(year)  # Unknown years will be automatically recognized
 
@@ -852,11 +852,11 @@ class InputDataDiagnosis:
         error_buffer = io.StringIO()
         with redirect_stderr(error_buffer):
             dataframe = pd.read_csv(
-                input_entity.file_path, 
-                skiprows=input_entity.initial_lines_to_skip, 
+                input_entity.file_path,
+                skiprows=input_entity.initial_lines_to_skip,
                 header=0 if input_entity.header_is_included else None,   # type: ignore
-                error_bad_lines=False, 
-                warn_bad_lines=True, 
+                error_bad_lines=False,
+                warn_bad_lines=True,
                 na_filter=False
             )
         assert isinstance(dataframe, pd.DataFrame)
@@ -881,7 +881,7 @@ class InputDataDiagnosis:
         dataframe[minval_colname] = dataframe.apply(lambda x: DataRuleRepository.query_variable_min_value(x[variable_colname], x[unit_colname]))
         dataframe[maxval_colname] = dataframe.apply(lambda x: DataRuleRepository.query_variable_max_value(x[variable_colname], x[unit_colname]))
         # Reassign coltypes
-        dataframe[scenario_colname] = dataframe[scenario_colname].apply(str)  
+        dataframe[scenario_colname] = dataframe[scenario_colname].apply(str)
         dataframe[region_colname] = dataframe[region_colname].apply(str)
         dataframe[variable_colname] = dataframe[variable_colname].apply(str)
         dataframe[item_colname] = dataframe[item_colname].apply(str)
@@ -919,16 +919,16 @@ class InputDataDiagnosis:
         rows_w_structissues.drop_duplicates()
         self.nrows_w_struct_issue = rows_w_structissues.shape[0]
         # Filter duplicate records
-        duplicates_df = _remaining_df[_remaining_df.duplicated()]  
-        assert duplicates_df    
+        duplicates_df = _remaining_df[_remaining_df.duplicated()]
+        assert duplicates_df
         # TODO: build dataframes for rows with ignored scenario and accepted rows, and log them into a file
         # make sure to maintain the existing granularity level when logging the rows
 
     def _get_fixed_value_or_dummy_value(self, value: str) -> float:
         """Helper method for parse_data() implemented in pandas"""
         fix = DataRuleRepository.query_fix_from_value_fix_table(value)
-        fix = fix if fix is not None else value 
-        try: 
+        fix = fix if fix is not None else value
+        try:
             return float(fix)
         except:
             return 0
@@ -936,7 +936,7 @@ class InputDataDiagnosis:
 
 class OutputDataEntity:
     """Domain entity for our processed/output data"""
-    
+
     # Column names of the pandas dataframe that stores our processed data
     MODEL_COLNAME: str = "Model name"
     SCENARIO_COLNAME: str = "Scenario"
@@ -984,7 +984,7 @@ class OutputDataEntity:
         sliced_data[self.YEAR_COLNAME] = pd.to_numeric(sliced_data[self.YEAR_COLNAME])
         sliced_data[self.VALUE_COLNAME] = pd.to_numeric(sliced_data[self.VALUE_COLNAME])
         return sliced_data.groupby(self.ITEM_COLNAME)
- 
+
     def get_growth_trends_table(self, scenario: str, region: str, variable: str) -> Optional[DataFrameGroupBy]:
         """
         Return a table for growth trends visualization or None
@@ -1016,9 +1016,9 @@ class OutputDataEntity:
         TODO: Consider abstracting some functionalities in this class into a Factory class and a Service class
         """
         # Read from accepted rows destination file
-        # The file should have no header row or lines to skip, and should not have records with any row issues, but 
+        # The file should have no header row or lines to skip, and should not have records with any row issues, but
         # may still contain records with fixable field issues. The records in this file should also not have additional
-        # or removed columns. 
+        # or removed columns.
         # @ date  Aug 5, 2021
         processed_data = pd.read_csv(input_diagnosis.ACCEPTEDROWS_DSTPATH, delimiter=input_entity.delimiter, header=None, dtype=object) # type: ignore
         # Make sure the data frame has all the required 8 columns (not more) in the correct arrangement
@@ -1034,22 +1034,22 @@ class OutputDataEntity:
         ]
         processed_data = processed_data[colnames]
         processed_data.insert(0, cls.MODEL_COLNAME, input_entity.model_name)
-        # Rename data frame columns 
+        # Rename data frame columns
         processed_data.columns = [
-            cls.MODEL_COLNAME, 
+            cls.MODEL_COLNAME,
             cls.SCENARIO_COLNAME,
             cls.REGION_COLNAME,
             cls.VARIABLE_COLNAME,
             cls.ITEM_COLNAME,
             cls.UNIT_COLNAME,
-            cls.YEAR_COLNAME, 
+            cls.YEAR_COLNAME,
             cls.VALUE_COLNAME
         ]
-        # Reassign column dtypes 
+        # Reassign column dtypes
         # Note: numeric columns are stored as str because we might have values like NA, N/A, #DIV/0! etc
-        processed_data[cls.SCENARIO_COLNAME] = processed_data[cls.SCENARIO_COLNAME].astype("category")  
-        processed_data[cls.REGION_COLNAME] = processed_data[cls.REGION_COLNAME].astype("category")  
-        processed_data[cls.VARIABLE_COLNAME] = processed_data[cls.VARIABLE_COLNAME].astype("category")  
+        processed_data[cls.SCENARIO_COLNAME] = processed_data[cls.SCENARIO_COLNAME].astype("category")
+        processed_data[cls.REGION_COLNAME] = processed_data[cls.REGION_COLNAME].astype("category")
+        processed_data[cls.VARIABLE_COLNAME] = processed_data[cls.VARIABLE_COLNAME].astype("category")
         processed_data[cls.ITEM_COLNAME] = processed_data[cls.ITEM_COLNAME].astype("category")
         processed_data[cls.YEAR_COLNAME] = processed_data[cls.YEAR_COLNAME].apply(str)  # TODO: Will this affect performance?
         processed_data[cls.VALUE_COLNAME] = processed_data[cls.VALUE_COLNAME].apply(str)
@@ -1128,13 +1128,13 @@ class OutputDataEntity:
                     droppedunits.add(label)
                 elif associatedcol == input_diagnosis.VALUE_COLNAME:
                     droppedvalues.add(label)
-        # Apply label fixes 
+        # Apply label fixes
         processed_data[cls.SCENARIO_COLNAME] = processed_data[cls.SCENARIO_COLNAME].apply(lambda x: scenariomapping[x] if x in scenariomapping.keys() else x)
         processed_data[cls.REGION_COLNAME] = processed_data[cls.REGION_COLNAME].apply(lambda x: regionmapping[x] if x in regionmapping.keys() else x)
         processed_data[cls.VARIABLE_COLNAME] = processed_data[cls.VARIABLE_COLNAME].apply(lambda x: variablemapping[x] if x in variablemapping.keys() else x)
         processed_data[cls.ITEM_COLNAME] = processed_data[cls.ITEM_COLNAME].apply(lambda x: itemmapping[x] if x in itemmapping.keys() else x)
         processed_data[cls.UNIT_COLNAME] = processed_data[cls.UNIT_COLNAME].apply(lambda x: unitmapping[x] if x in unitmapping.keys() else x)
-        processed_data[cls.YEAR_COLNAME] = processed_data[cls.YEAR_COLNAME].apply(lambda x: unitmapping[x] if x in unitmapping.keys() else x)
+        processed_data[cls.YEAR_COLNAME] = processed_data[cls.YEAR_COLNAME].apply(lambda x: yearmapping[x] if x in yearmapping.keys() else x)
         processed_data[cls.VALUE_COLNAME] = processed_data[cls.VALUE_COLNAME].apply(lambda x: valuemapping[x] if x in valuemapping.keys() else x)
         # Drop records containing dropped labels
         processed_data = processed_data[processed_data[cls.SCENARIO_COLNAME].apply(lambda x: x not in droppedscenarios)]
@@ -1162,22 +1162,22 @@ class OutputDataEntity:
         """Return an output data entity based by using existing output dataset that has been rediagnosed, and filtered"""
         # Read from accepted rows destination file
         processed_data = pd.read_csv(input_data_diagnosis.FILTERED_OUTPUT_DSTPATH, delimiter=input_entity.delimiter, header=None, dtype=object) # type: ignore
-        # Rename data frame columns 
+        # Rename data frame columns
         processed_data.columns = [
-            cls.MODEL_COLNAME, 
+            cls.MODEL_COLNAME,
             cls.SCENARIO_COLNAME,
             cls.REGION_COLNAME,
             cls.VARIABLE_COLNAME,
             cls.ITEM_COLNAME,
             cls.UNIT_COLNAME,
-            cls.YEAR_COLNAME, 
+            cls.YEAR_COLNAME,
             cls.VALUE_COLNAME
         ]
-        # Reassign column dtypes 
+        # Reassign column dtypes
         # Note: numeric columns are stored as str because we might have values like NA, N/A, #DIV/0! etc
-        processed_data[cls.SCENARIO_COLNAME] = processed_data[cls.SCENARIO_COLNAME].astype("category")  
-        processed_data[cls.REGION_COLNAME] = processed_data[cls.REGION_COLNAME].astype("category")  
-        processed_data[cls.VARIABLE_COLNAME] = processed_data[cls.VARIABLE_COLNAME].astype("category")  
+        processed_data[cls.SCENARIO_COLNAME] = processed_data[cls.SCENARIO_COLNAME].astype("category")
+        processed_data[cls.REGION_COLNAME] = processed_data[cls.REGION_COLNAME].astype("category")
+        processed_data[cls.VARIABLE_COLNAME] = processed_data[cls.VARIABLE_COLNAME].astype("category")
         processed_data[cls.ITEM_COLNAME] = processed_data[cls.ITEM_COLNAME].astype("category")
         processed_data[cls.YEAR_COLNAME] = processed_data[cls.YEAR_COLNAME].apply(str)  # TODO: Will this affect performance?
         processed_data[cls.VALUE_COLNAME] = processed_data[cls.VALUE_COLNAME].apply(str)
@@ -1198,7 +1198,7 @@ class OutputDataEntity:
     @classmethod
     def _populate_unique_fields(cls, output_entity: OutputDataEntity) -> None:
         """"
-        Populate the lists of unique fields retrieved from the processed data frame. 
+        Populate the lists of unique fields retrieved from the processed data frame.
         Each list must be sorted.
         NOTE: Some of the data frame columns have categorical data type, which cannot be sorted right away, so we convert
         these columns into ndarrays first.
@@ -1222,8 +1222,8 @@ class DataRuleRepository:
     """
     Provide interfaces to interact with the spreadsheet that stores our data formatting rules
 
-    NOTE: It seems like the "proper" domain-driven approach is to place a Repository object in a higher layer 
-    and use dependency inversion pattern to access it from the domain layer, but such complexity seems unnecessary 
+    NOTE: It seems like the "proper" domain-driven approach is to place a Repository object in a higher layer
+    and use dependency inversion pattern to access it from the domain layer, but such complexity seems unnecessary
     given the current project requirement.
     @date Aug 5, 2021
     """
@@ -1267,7 +1267,7 @@ class DataRuleRepository:
     # Populate data structures for critical queries
     # - Populate matching unit memo
     for unit in _units:
-        _matchingunit_memo[unit.lower()] = unit 
+        _matchingunit_memo[unit.lower()] = unit
     # - Populate matching variable memo
     for variable in _variables:
         _matchingvariable_memo[variable.lower()] = variable
