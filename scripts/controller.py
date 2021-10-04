@@ -28,6 +28,12 @@ class Controller:
         """Load data, build UI"""
         self.view.display()
 
+        # NOTE Uncomment testing code below to avoid problems during jupyter lab debuging
+        # self.model.uploadedfile_name = 'globiom.csv'  # <-- Replace w/test input file name
+        # self.view.show_notification(Notification.SUCCESS, Notification.FILE_UPLOAD_SUCCESS)
+        # self.view.update_file_upload_page()
+        # self._reset_later_pages()
+
     def _reset_later_pages(self) -> None:
         """Set the current page as the last/furthest active page"""
         if self.model.furthest_active_user_page == self.model.current_user_page:
@@ -45,9 +51,9 @@ class Controller:
             self.view.modify_cursor_style(CSS.CURSOR_MOD__WAIT)
             self.view.update_base_app()
             self.view.modify_cursor_style(None)
-        else: 
+        else:
             self.view.show_notification(Notification.ERROR, "Your account does not have admin privileges")
-    
+
     def onclick_admin_mode_btn(self, widget: ui.Button) -> None:
         """Admin mode button was clicked"""
         self.model.application_mode = ApplicationMode.USER
@@ -263,7 +269,7 @@ class Controller:
         """'Previous' button on the data specification page was clicked"""
         self.model.current_user_page = UserPage.FILE_UPLOAD
         self.view.update_base_app()
-    
+
     def onclick_next_from_upage_2(self, widget: ui.Button) -> None:
         """'Next' button on the data specification page was clicked"""
         warning_message = self.model.validate_data_specification_input()
@@ -299,7 +305,7 @@ class Controller:
             return
         self.model.unknown_labels_overview_tbl[row_index][CHECKBOX_INDEX] = new_value
         self._reset_later_pages()
-    
+
     def onclick_previous_from_upage_3(self, widget: ui.Button) -> None:
         """'Previous' button on the data specification page was clicked"""
         self.model.current_user_page = UserPage.DATA_SPECIFICATION
@@ -308,25 +314,35 @@ class Controller:
     def onclick_next_from_upage_3(self, widget: ui.Button) -> None:
         """'Next' button on the data specification page was clicked"""
         warning_message = self.model.validate_unknown_labels_table(self.model.unknown_labels_overview_tbl)
+
         if warning_message is not None:
             self.view.show_notification(Notification.WARNING, warning_message)
             return
+
         self.model.current_user_page = UserPage.PLAUSIBILITY_CHECKING
+
         if self.model.furthest_active_user_page == UserPage.INTEGRITY_CHECKING:
             self.view.modify_cursor_style(CSS.CURSOR_MOD__WAIT)
             self.model.furthest_active_user_page = UserPage.PLAUSIBILITY_CHECKING
             assert self.model.input_data_diagnosis is not None
             popup_message = self.model.init_plausibility_checking_page_states(self.model.unknown_labels_overview_tbl)
+
             if popup_message:
                 self.view.show_modal_dialog("Re-Diagnose Result", popup_message)
-            self.view.update_plausibility_checking_page()
-            self.view.update_value_trends_chart()
-            self.view.update_growth_trends_chart()
+
+                if popup_message[:5] == 'ERROR':
+                    self.model.current_user_page = UserPage.INTEGRITY_CHECKING
+
+            if self.model.current_user_page == UserPage.PLAUSIBILITY_CHECKING:
+                self.view.update_plausibility_checking_page()
+                self.view.update_value_trends_chart()
+                self.view.update_growth_trends_chart()
+
         self.view.update_base_app()
         self.view.modify_cursor_style(None)
 
     # Plausibility checking page callbacks
-    
+
     def onclick_value_trends_tab(self, widget: ui.Button) -> None:
         """Value trends tab was clicked"""
         self.model.active_visualization_tab = VisualizationTab.VALUE_TRENDS
@@ -418,6 +434,6 @@ class Controller:
             self.view.show_modal_dialog(
                 "Pending Submission Approval",
                 "Your file has been submitted, but it is being placed under review because it contains overridden "
-                "labels. Reach out to Dominique (vandermd@purdue.edu) about this submission so he can begin the " 
+                "labels. Reach out to Dominique (vandermd@purdue.edu) about this submission so he can begin the "
                 "review process.",
             )
