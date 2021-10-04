@@ -294,31 +294,37 @@ class Model:
         )
         # Create output data based on information from input data and input data diagnosis
         self.output_data_entity = OutputDataEntity.create(self.input_data_entity, self.input_data_diagnosis)
-        if self.input_data_diagnosis.rediagnose_n_filter_output_data(self.output_data_entity):
-            self.output_data_entity = OutputDataEntity.create_from_rediagnosed_n_filtered_output_data(self.input_data_entity, self.input_data_diagnosis)
-            popup_message = "After fixing some unknown variable or unit fields, the application found more records " \
-                "that contain out-of-bound values. The application has filtered out these records from the output data " \
-                "but it does not have a feature to report these records yet."
-        # Map attributes from output data entity to page states
-        self.outputfile_path = self.output_data_entity.file_path
-        self.uploaded_scenarios = ["", *self.output_data_entity.unique_scenarios]
-        self.uploaded_regions = ["", *self.output_data_entity.unique_regions]
-        self.uploaded_variables = ["", *self.output_data_entity.unique_variables]
-        self.uploaded_items = ["", *self.output_data_entity.unique_items]
-        # Reset active tab
-        self.active_visualization_tab = VisualizationTab.VALUE_TRENDS
-        # Set default values if they exist
-        if "SSP2_NoMt_NoCC" in self.uploaded_scenarios:
-            self.valuetrends_scenario = "SSP2_NoMt_NoCC"
-            self.growthtrends_scenario = "SSP2_NoMt_NoCC"
-        if "WLD" in self.uploaded_regions:
-            self.valuetrends_region = "WLD"
-            self.growthtrends_region = "WLD"
-        if "PROD" in self.uploaded_variables:
-            self.valuetrends_variable = "PROD"
-            self.growthtrends_variable = "PROD"
-        self.valuetrends_table = None
-        self.growthtrends_table = None
+
+        if self.output_data_entity:
+
+            if self.input_data_diagnosis.rediagnose_n_filter_output_data(self.output_data_entity):
+                self.output_data_entity = OutputDataEntity.create_from_rediagnosed_n_filtered_output_data(self.input_data_entity, self.input_data_diagnosis)
+                popup_message = "After fixing some unknown variable or unit fields, the application found more records " \
+                    "that contain out-of-bound values. The application has filtered out these records from the output data " \
+                    "but it does not have a feature to report these records yet."
+            # Map attributes from output data entity to page states
+            self.outputfile_path = self.output_data_entity.file_path
+            self.uploaded_scenarios = ["", *self.output_data_entity.unique_scenarios]
+            self.uploaded_regions = ["", *self.output_data_entity.unique_regions]
+            self.uploaded_variables = ["", *self.output_data_entity.unique_variables]
+            self.uploaded_items = ["", *self.output_data_entity.unique_items]
+            # Reset active tab
+            self.active_visualization_tab = VisualizationTab.VALUE_TRENDS
+            # Set default values if they exist
+            if "SSP2_NoMt_NoCC" in self.uploaded_scenarios:
+                self.valuetrends_scenario = "SSP2_NoMt_NoCC"
+                self.growthtrends_scenario = "SSP2_NoMt_NoCC"
+            if "WLD" in self.uploaded_regions:
+                self.valuetrends_region = "WLD"
+                self.growthtrends_region = "WLD"
+            if "PROD" in self.uploaded_variables:
+                self.valuetrends_variable = "PROD"
+                self.growthtrends_variable = "PROD"
+            self.valuetrends_table = None
+            self.growthtrends_table = None
+        else:
+            popup_message = 'ERROR: Unable to apply changes. Please adjust fixes or overrides.'
+
         return popup_message
 
     def update_valuetrends_visualization_states(self) -> None:

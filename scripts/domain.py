@@ -1128,22 +1128,26 @@ class OutputDataEntity:
                     droppedunits.add(label)
                 elif associatedcol == input_diagnosis.VALUE_COLNAME:
                     droppedvalues.add(label)
-        # Apply label fixes
-        processed_data[cls.SCENARIO_COLNAME] = processed_data[cls.SCENARIO_COLNAME].apply(lambda x: scenariomapping[x] if x in scenariomapping.keys() else x)
-        processed_data[cls.REGION_COLNAME] = processed_data[cls.REGION_COLNAME].apply(lambda x: regionmapping[x] if x in regionmapping.keys() else x)
-        processed_data[cls.VARIABLE_COLNAME] = processed_data[cls.VARIABLE_COLNAME].apply(lambda x: variablemapping[x] if x in variablemapping.keys() else x)
-        processed_data[cls.ITEM_COLNAME] = processed_data[cls.ITEM_COLNAME].apply(lambda x: itemmapping[x] if x in itemmapping.keys() else x)
-        processed_data[cls.UNIT_COLNAME] = processed_data[cls.UNIT_COLNAME].apply(lambda x: unitmapping[x] if x in unitmapping.keys() else x)
-        processed_data[cls.YEAR_COLNAME] = processed_data[cls.YEAR_COLNAME].apply(lambda x: yearmapping[x] if x in yearmapping.keys() else x)
-        processed_data[cls.VALUE_COLNAME] = processed_data[cls.VALUE_COLNAME].apply(lambda x: valuemapping[x] if x in valuemapping.keys() else x)
-        # Drop records containing dropped labels
-        processed_data = processed_data[processed_data[cls.SCENARIO_COLNAME].apply(lambda x: x not in droppedscenarios)]
-        processed_data = processed_data[processed_data[cls.REGION_COLNAME].apply(lambda x: x not in droppedregions)]
-        processed_data = processed_data[processed_data[cls.VARIABLE_COLNAME].apply(lambda x: x not in droppedvariables)]
-        processed_data = processed_data[processed_data[cls.ITEM_COLNAME].apply(lambda x: x not in droppeditems)]
-        processed_data = processed_data[processed_data[cls.YEAR_COLNAME].apply(lambda x: x not in droppedyears)]
-        processed_data = processed_data[processed_data[cls.UNIT_COLNAME].apply(lambda x: x not in droppedunits)]
-        processed_data = processed_data[processed_data[cls.VALUE_COLNAME].apply(lambda x: x not in droppedvalues)]
+        try:
+            # Apply label fixes
+            processed_data[cls.SCENARIO_COLNAME] = processed_data[cls.SCENARIO_COLNAME].apply(lambda x: scenariomapping[x] if x in scenariomapping.keys() else x)
+            processed_data[cls.REGION_COLNAME] = processed_data[cls.REGION_COLNAME].apply(lambda x: regionmapping[x] if x in regionmapping.keys() else x)
+            processed_data[cls.VARIABLE_COLNAME] = processed_data[cls.VARIABLE_COLNAME].apply(lambda x: variablemapping[x] if x in variablemapping.keys() else x)
+            processed_data[cls.ITEM_COLNAME] = processed_data[cls.ITEM_COLNAME].apply(lambda x: itemmapping[x] if x in itemmapping.keys() else x)
+            processed_data[cls.UNIT_COLNAME] = processed_data[cls.UNIT_COLNAME].apply(lambda x: unitmapping[x] if x in unitmapping.keys() else x)
+            processed_data[cls.YEAR_COLNAME] = processed_data[cls.YEAR_COLNAME].apply(lambda x: yearmapping[x] if x in yearmapping.keys() else x)
+            processed_data[cls.VALUE_COLNAME] = processed_data[cls.VALUE_COLNAME].apply(lambda x: valuemapping[x] if x in valuemapping.keys() else x)
+            # Drop records containing dropped labels
+            processed_data = processed_data[processed_data[cls.SCENARIO_COLNAME].apply(lambda x: x not in droppedscenarios)]
+            processed_data = processed_data[processed_data[cls.REGION_COLNAME].apply(lambda x: x not in droppedregions)]
+            processed_data = processed_data[processed_data[cls.VARIABLE_COLNAME].apply(lambda x: x not in droppedvariables)]
+            processed_data = processed_data[processed_data[cls.ITEM_COLNAME].apply(lambda x: x not in droppeditems)]
+            processed_data = processed_data[processed_data[cls.YEAR_COLNAME].apply(lambda x: x not in droppedyears)]
+            processed_data = processed_data[processed_data[cls.UNIT_COLNAME].apply(lambda x: x not in droppedunits)]
+            processed_data = processed_data[processed_data[cls.VALUE_COLNAME].apply(lambda x: x not in droppedvalues)]
+        except Exception:
+            return None
+
         # Create entity
         output_entity = OutputDataEntity()
         output_entity.processed_data = processed_data
