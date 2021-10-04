@@ -80,7 +80,7 @@ class Model:
         # several other states. So, we only define 1 state as an instance attribute here, and will define the other
         # states as properties later. We also define the states as properties because changes made to them needs to be relayed to
         # to the domain model @ Aug 4, 2021
-        self.VALID_MODEL_NAMES = DataRuleRepository.query_model_names()  # - valid model names
+        self.VALID_MODEL_NAMES = None  # - valid model names
         # Integrity checking page's states
         # - result of row checks
         self.nrows_w_struct_issue = 0  # - number of rows with structural issues
@@ -96,11 +96,11 @@ class Model:
         self.bad_labels_overview_tbl: list[list[str]] = []
         self.unknown_labels_overview_tbl: list[list[Union[str, bool]]] = []
         # - valid labels that can be used to fix an unknown field (based on its associated column)
-        self.VALID_SCENARIOS = DataRuleRepository.query_scenarios()
-        self.VALID_REGIONS = DataRuleRepository.query_regions()
-        self.VALID_VARIABLES = DataRuleRepository.query_variables()
-        self.VALID_ITEMS = DataRuleRepository.query_items()
-        self.VALID_UNITS = DataRuleRepository.query_units()
+        self.VALID_SCENARIOS = None
+        self.VALID_REGIONS = None
+        self.VALID_VARIABLES = None
+        self.VALID_ITEMS = None
+        self.VALID_UNITS = None
         # Plausibility checking page's states
         self.outputfile_path = Path()  # - path to cleaned and processed file
         self.overridden_labels = 0
@@ -550,3 +550,12 @@ class Model:
         return np.array(
             [model_col, scenario_col, region_col, variable_col, item_col, unit_col, year_col, value_col]
         ).transpose()
+
+    def load_rules(self, proj_path):
+        DataRuleRepository.load(self.SHAREDDIR_PATH, proj_path)
+        self.VALID_MODEL_NAMES = DataRuleRepository.query_model_names()
+        self.VALID_SCENARIOS = DataRuleRepository.query_scenarios()
+        self.VALID_REGIONS = DataRuleRepository.query_regions()
+        self.VALID_VARIABLES = DataRuleRepository.query_variables()
+        self.VALID_ITEMS = DataRuleRepository.query_items()
+        self.VALID_UNITS = DataRuleRepository.query_units()

@@ -1223,71 +1223,105 @@ class OutputDataEntity:
 
 
 class DataRuleRepository:
-    """
-    Provide interfaces to interact with the spreadsheet that stores our data formatting rules
+    """Provide access to data rules from spreadsheet"""
 
-    NOTE: It seems like the "proper" domain-driven approach is to place a Repository object in a higher layer
-    and use dependency inversion pattern to access it from the domain layer, but such complexity seems unnecessary
-    given the current project requirement.
-    @date Aug 5, 2021
-    """
+    __spreadsheet: Dict[str, DataFrame]  # Spreadsheet containing labels information
 
-    DATA_RULES_SPREADSHEET_PATH: Path = WORKINGDIR_PATH / "RuleTables.xlsx"
-
-    # Spreadsheet containing labels information
-    __spreadsheet: Dict[str, DataFrame] = pd.read_excel(
-        str(DATA_RULES_SPREADSHEET_PATH),
-        engine="openpyxl",
-        sheet_name=None,
-        keep_default_na=False,
-    )
     # Valid labels table
-    _model_table = __spreadsheet["ModelTable"]
-    _scenario_table = __spreadsheet["ScenarioTable"]
-    _region_table = __spreadsheet["RegionTable"]
-    _variable_table = __spreadsheet["VariableTable"]
-    _item_table = __spreadsheet["ItemTable"]
-    _unit_table = __spreadsheet["UnitTable"]
-    _year_table = __spreadsheet["YearTable"]
+    _model_table = None
+    _scenario_table = None
+    _region_table = None
+    _variable_table = None
+    _item_table = None
+    _unit_table = None
+    _year_table = None
+
     # Fix tables
-    _regionfix_table = __spreadsheet["RegionFixTable"]
-    _valuefix_table = __spreadsheet["ValueFixTable"]
+    _regionfix_table = None
+    _valuefix_table = None
+
     # Constraint tables
-    __variableunitvalue_table = __spreadsheet["VariableUnitValueTable"]
+    __variableunitvalue_table = None
+
     # Valid columns
-    _model_names = set(_model_table["Model"].astype("str"))
-    _scenarios = set(_scenario_table["Scenario"].astype("str"))
-    _regions = set(_region_table["Region"].astype("str"))
-    _variables = set(_variable_table["Variable"].astype("str"))
-    _items = set(_item_table["Item"].astype("str"))
-    _units = set(_unit_table["Unit"].astype("str"))
-    _years = set(_year_table["Year"].astype("str"))
+    _model_names = None
+    _scenarios = None
+    _regions = None
+    _variables = None
+    _items = None
+    _units = None
+    _years = None
+
     # Data structure for critical queries
     _matchingunit_memo: Dict[str, str] = {}
     _matchingvariable_memo: Dict[str, str] = {}
-    _valuefix_memo: Dict[str, str] = dict(_valuefix_table.iloc[:, 1:].values)  # Load dataframe as dict
+    _valuefix_memo: Dict[str, str] = {}
     _variable_minvalue_memo: Dict[Tuple[str, str], float] = {}
     _variable_maxvalue_memo: Dict[Tuple[str, str], float] = {}
-    # Populate data structures for critical queries
-    # - Populate matching unit memo
-    for unit in _units:
-        _matchingunit_memo[unit.lower()] = unit
-    # - Populate matching variable memo
-    for variable in _variables:
-        _matchingvariable_memo[variable.lower()] = variable
-    # - Populate value-fix memo
-    for key in _valuefix_memo.keys():
-        _valuefix_memo[key] = str(_valuefix_memo[key])  # store numbers as strings
-    # - Populate variable's min/max value memo
-    for namedtuple in __variableunitvalue_table.itertuples(index=False):
-        # Get required variables
-        variable = namedtuple.Variable
-        unit = namedtuple.Unit
-        minvalue = namedtuple[__variableunitvalue_table.columns.get_loc("Minimum Value")]
-        maxvalue = namedtuple[__variableunitvalue_table.columns.get_loc("Maximum Value")]
-        # Update memo
-        _variable_minvalue_memo[(variable, unit)] = minvalue
-        _variable_maxvalue_memo[(variable, unit)] = maxvalue
+
+    @classmethod
+    def load(cls, shared_path, proj_path):
+        """Read rule xls, load class vars."""
+        # Spreadsheet containing labels information
+        cls.__spreadsheet = pd.read_excel(
+            os.path.join(shared_path, proj_path, ".rules", "RuleTables.xlsx"),
+            engine="openpyxl",
+            sheet_name=None,
+            keep_default_na=False,
+        )
+
+        # Valid labels table
+        cls._model_table = cls.__spreadsheet["ModelTable"]
+        cls._scenario_table = cls.__spreadsheet["ScenarioTable"]
+        cls._region_table = cls.__spreadsheet["RegionTable"]
+        cls._variable_table = cls.__spreadsheet["VariableTable"]
+        cls._item_table = cls.__spreadsheet["ItemTable"]
+        cls._unit_table = cls.__spreadsheet["UnitTable"]
+        cls._year_table = cls.__spreadsheet["YearTable"]
+
+        # Fix tables
+        cls._regionfix_table = cls.__spreadsheet["RegionFixTable"]
+        cls._valuefix_table = cls.__spreadsheet["ValueFixTable"]
+
+        # Constraint tables
+        cls.__variableunitvalue_table = cls.__spreadsheet["VariableUnitValueTable"]
+
+        # Valid columns
+        cls._model_names = set(cls._model_table["Model"].astype("str"))
+        cls._scenarios = set(cls._scenario_table["Scenario"].astype("str"))
+        cls._regions = set(cls._region_table["Region"].astype("str"))
+        cls._variables = set(cls._variable_table["Variable"].astype("str"))
+        cls._items = set(cls._item_table["Item"].astype("str"))
+        cls._units = set(cls._unit_table["Unit"].astype("str"))
+        cls._years = set(cls._year_table["Year"].astype("str"))
+
+        # Data structure for critical queries
+        cls._valuefix_memo = dict(cls._valuefix_table.iloc[:, 1:].values)  # Load dataframe as dict
+
+        # Populate data structures for critical queries
+
+        # - Populate matching unit memo
+        for unit in cls._units:
+            cls._matchingunit_memo[unit.lower()] = unit
+
+        # - Populate matching variable memo
+        for variable in cls._variables:
+            cls._matchingvariable_memo[variable.lower()] = variable
+
+        # - Populate value-fix memo
+        for key in cls._valuefix_memo.keys():
+            cls._valuefix_memo[key] = str(cls._valuefix_memo[key])  # store numbers as strings
+
+        # - Populate variable's min/max value memo
+        for namedtuple in cls.__variableunitvalue_table.itertuples(index=False):
+            # Get required variables
+            variable = namedtuple.Variable
+            unit = namedtuple.Unit
+            minvalue = namedtuple[cls.__variableunitvalue_table.columns.get_loc("Minimum Value")]
+            maxvalue = namedtuple[cls.__variableunitvalue_table.columns.get_loc("Maximum Value")]
+            # Update memo
+            cls._variable_minvalue_memo[(variable, unit)] = minvalue
+            cls._variable_maxvalue_memo[(variable, unit)] = maxvalue
 
     @classmethod
     def query_model_names(cls) -> List[str]:

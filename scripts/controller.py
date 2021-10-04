@@ -28,7 +28,7 @@ class Controller:
         """Load data, build UI"""
         self.view.display()
 
-        # NOTE Uncomment testing code below to avoid problems during jupyter lab debuging
+        # NOTE: TO_DEBUG: Uncomment testing code below to avoid problems during jupyter lab debuging
         # self.model.uploadedfile_name = 'globiom.csv'  # <-- Replace w/test input file name
         # self.view.show_notification(Notification.SUCCESS, Notification.FILE_UPLOAD_SUCCESS)
         # self.view.update_file_upload_page()
@@ -91,6 +91,9 @@ class Controller:
         """The selections for associated projects has changed"""
         self.model.associated_project_dirnames = list(change["new"])
         self._reset_later_pages()
+        self.view.modify_cursor_style(CSS.CURSOR_MOD__WAIT)
+        self.model.load_rules(self.model.associated_project_dirnames[0])
+        self.view.modify_cursor_style(None)
 
     def onclick_next_from_upage_1(self, widget: ui.Button) -> None:
         """'Next' button on the file upload page was clicked"""

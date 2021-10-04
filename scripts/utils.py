@@ -222,7 +222,7 @@ class JSAppModel:
         """Get auth token to interact with notebook server's API"""
         # Terminal command to print the urls of running servers.
 
-        # NOTE Specify "jupyter lab..." to debug, else "jupyter notebook..."
+        # NOTE: TO_DEBUG: Specify "jupyter lab..." to debug, else "jupyter notebook..."
         stream = os.popen("jupyter notebook list")
 
         output = stream.read()
