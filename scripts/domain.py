@@ -1260,11 +1260,11 @@ class DataRuleRepository:
     _variable_maxvalue_memo: Dict[Tuple[str, str], float] = {}
 
     @classmethod
-    def load(cls, shared_path, proj_path):
+    def load(cls, shared_path, proj_path, subdir_path):
         """Read rule xls, load class vars."""
         # Spreadsheet containing labels information
         cls.__spreadsheet = pd.read_excel(
-            os.path.join(shared_path, proj_path, ".rules", "RuleTables.xlsx"),
+            os.path.join(shared_path, proj_path, subdir_path, ".rules", "RuleTables.xlsx"),
             engine="openpyxl",
             sheet_name=None,
             keep_default_na=False,

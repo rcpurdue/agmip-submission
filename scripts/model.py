@@ -47,7 +47,8 @@ class Model:
     WORKINGDIR_PATH = Path(__name__).parent.parent / "workingdir"  # <PROJECT_DIR>/workingdir
     UPLOADDIR_PATH = WORKINGDIR_PATH / "uploads"
     DOWNLOADDIR_PATH = WORKINGDIR_PATH / "downloads"
-    SHAREDDIR_PATH = Path("/srv/irods/")
+    DATA_PROJ_ROOT = Path('/data/projects/')
+    DATA_PROJ_SUBD = Path('files/')
 
     def __init__(self):
         # Import MVC classes here to prevent circular import problem
@@ -140,11 +141,11 @@ class Model:
 
     def get_submitted_files_info(self) -> list[list[str]]:
         """Return a list of submitted files' info"""
-        dirnames = os.popen(f'ls {self.SHAREDDIR_PATH}').read().split()
+        dirnames = os.popen(f'ls {self.DATA_PROJ_ROOT}').read().split()
         project_dirnames = [dirname for dirname in dirnames if dirname[:len("agmipglobalecon")] == "agmipglobalecon"]
         files_info = []
         for project_dirname in project_dirnames:
-            submissiondir_path = self.SHAREDDIR_PATH / project_dirname / ".submissions"
+            submissiondir_path = self.DATA_PROJ_ROOT / project_dirname / self.DATA_PROJ_SUBD / ".submissions"
             accepted_files = os.popen(f'ls {submissiondir_path} | grep .csv').read().split()
             pending_files = os.popen(f'ls {submissiondir_path / ".pending"} | grep [0-9].csv').read().split()
             for filename in accepted_files:
@@ -353,9 +354,9 @@ class Model:
         """Submit processed file to the correct directory"""
         for project_dirname in self.associated_project_dirnames:
             outputfile_dstpath = (
-                self.SHAREDDIR_PATH / project_dirname / ".submissions" / ".pending" / self.outputfile_path.name
+                self.DATA_PROJ_ROOT / project_dirname / self.DATA_PROJ_SUBD / ".submissions" / ".pending" / self.outputfile_path.name
                 if self.overridden_labels > 0
-                else self.SHAREDDIR_PATH / project_dirname / ".submissions" / self.outputfile_path.name
+                else self.DATA_PROJ_ROOT / project_dirname / self.DATA_PROJ_SUBD / ".submissions" / self.outputfile_path.name
             )
             shutil.copy(self.outputfile_path, outputfile_dstpath)
             # Submit a file detailing override request or create a new data cube
@@ -552,7 +553,7 @@ class Model:
         ).transpose()
 
     def load_rules(self, proj_path):
-        DataRuleRepository.load(self.SHAREDDIR_PATH, proj_path)
+        DataRuleRepository.load(self.DATA_PROJ_ROOT, proj_path, self.DATA_PROJ_SUBD)
         self.VALID_MODEL_NAMES = DataRuleRepository.query_model_names()
         self.VALID_SCENARIOS = DataRuleRepository.query_scenarios()
         self.VALID_REGIONS = DataRuleRepository.query_regions()
