@@ -1,0 +1,1 @@
+git ls-files -z | xargs -0 ls -lh | awk '{if ($5 > 1*1024*1024) print $5 " " $9}'
