@@ -47,3 +47,10 @@ The tool is currently hosted on MyGeoHub. MyGeoHub is a website based on HUBzero
 We recommend using an Anaconda environment. After creating and activating the conda environment (see environment.yml), run Jupyter notebook to start the notebook server. Then, use the local URLs displayed by that command to access and run the notebook using your browser.
 
 Note that during development, you can change the code in the .py files and refresh the notebook to test the changes. Also, note that for file upload to work, you need to run the notebook server from the project directory or the parent of the project directory.
+
+Testing on a local workstation requires the following directory structure and rule file:
+
+- `/data/projects/agmipglobaleconagclim50iv/files/`
+    - `.submissions/`
+    - `.rules/`
+        - `RuleTables.xlsx`
