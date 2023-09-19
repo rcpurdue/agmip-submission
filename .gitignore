@@ -1,6 +1,8 @@
-.*
+.ipynb_checkpoints
+.gitignore
 workingdir/downloads/*.csv
 **.pyc
 **/__pycache__/
 **~*.xlsx
+
 
