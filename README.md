@@ -52,5 +52,6 @@ Testing on a local workstation requires the following directory structure and ru
 
 - `/data/projects/agmipglobaleconagclim50iv/files/`
     - `.submissions/`
+        - `.pending/` 
     - `.rules/`
         - `RuleTables.xlsx`
