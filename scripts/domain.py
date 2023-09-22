@@ -1,24 +1,18 @@
-from __future__ import annotations  # Delay the evaluation of types
-
 import os
 import math
 import io
 import csv
 import difflib
-
 from pathlib import Path
-from typing import Callable, Optional, List, Dict, Set, Tuple
 from contextlib import redirect_stderr
 from datetime import datetime
-
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
-from pandas.core.groupby.generic import DataFrameGroupBy
 
 
-WORKINGDIR_PATH: Path = Path(__name__).parent.parent / "workingdir"  # <PROJECT_DIR>/workingdir
-DOWNLOADDIR_PATH: Path = WORKINGDIR_PATH / "downloads"
+WORKINGDIR_PATH = Path(__name__).parent.parent / "workingdir"  # <PROJECT_DIR>/workingdir
+DOWNLOADDIR_PATH = WORKINGDIR_PATH / "downloads"
 
 
 class BadLabelInfo:
@@ -29,14 +23,14 @@ class BadLabelInfo:
 
     NOTE: Because we override the __hash__ method, this class is not completely safe to be used with hashtable-based
     data structure
-    @date Aug 5, 2021
     """
-    def __init__(self, label: str, associated_column: str, fix: str) -> None:
-        self.label: str = label
-        self.associated_column: str = associated_column
-        self.fix: str = fix
 
-    def __hash__(self) -> int:
+    def __init__(self, label, associated_column, fix):
+        self.label = label
+        self.associated_column = associated_column
+        self.fix = fix
+
+    def __hash__(self):
         """
         Override hash operation to make sure two objects with the same attribute values produces the same hash
 
@@ -45,10 +39,11 @@ class BadLabelInfo:
         """
         return hash(self.label + self.associated_column + self.fix)
 
-    def __eq__(self, obj) -> bool:
+    def __eq__(self, obj):
         """ Override equality operator for convenience """
         if not isinstance(obj, BadLabelInfo):
             return False
+
         return (self.label == obj.label) and (self.associated_column == obj.associated_column) and (self.fix == obj.fix)
 
 
@@ -62,14 +57,15 @@ class UnknownLabelInfo:
     data structure
     @date Aug 5, 2021
     """
-    def __init__(self, label: str, associated_column: str, closest_match: str, fix: str, override: bool):
-        self.label: str = label
-        self.associated_column: str = associated_column
-        self.closest_match: str = closest_match
-        self.fix: str = fix
-        self.override: bool = override
 
-    def __hash__(self) -> int:
+    def __init__(self, label, associated_column, closest_match, fix, override):
+        self.label = label
+        self.associated_column = associated_column
+        self.closest_match = closest_match
+        self.fix = fix
+        self.override = override
+
+    def __hash__(self):
         """
         Override hash operation to make sure two objects with the same attribute values produces the same hash
 
@@ -78,13 +74,14 @@ class UnknownLabelInfo:
         """
         return hash(self.label + self.associated_column + self.closest_match + self.fix + str(self.override))
 
-    def __eq__(self, obj) -> bool:
+    def __eq__(self, obj):
         """ Override equality operator for convenience """
         if not isinstance(obj, UnknownLabelInfo):
             return False
+
         return (self.label == obj.label) and (self.associated_column == obj.associated_column) and (self.closest_match == obj.closest_match) and (self.fix == obj.fix) and (self.override == obj.override)
 
-    def __str__(self) -> str:
+    def __str__(self):
         return f"{self.label},{self.associated_column},{self.closest_match},{self.fix},{self.override}"
 
 
@@ -102,45 +99,44 @@ class InputDataEntity:
 
     def __init__(self):
         # Input format specification attributes
-        self.model_name: str = ""
-        self.header_is_included: bool = False
-        self.scenarios_to_ignore: List[str] = []
+        self.model_name = ""
+        self.header_is_included = False
+        self.scenarios_to_ignore = []
         self._file_nrows = 0
         # Input format specification attributes & file path which will only be accessed via properties
-        # @date Aug 4, 2021
-        self._file_path: Path = Path()
-        self._delimiter: str = ""
-        self._initial_lines_to_skip: int = 0
+        self._file_path = Path()
+        self._delimiter = ""
+        self._initial_lines_to_skip = 0
         # Column assignment attributes
-        self.scenario_colnum: int = 0   # colnum -> column number (1-based indexing)
-        self.region_colnum: int = 0
-        self.variable_colnum: int = 0
-        self.item_colnum: int = 0
-        self.unit_colnum: int = 0
-        self.year_colnum: int = 0
-        self.value_colnum: int = 0
+        self.scenario_colnum = 0   # colnum -> column number (1-based indexing)
+        self.region_colnum = 0
+        self.variable_colnum = 0
+        self.item_colnum = 0
+        self.unit_colnum = 0
+        self.year_colnum = 0
+        self.value_colnum = 0
         # Private attributes to help calculate sample parsed input data
         # NOTE: The reason we keep track of the "topmost" sample and a "nonskipped" sample was to avoid loading the
         # whole file into memory. In retrospect, this is a premature optimization and could've been made
         # simpler.
         # TODO: Simplify the operations that require these two sample attributes
-        # @date Aug 5, 2021
-        self._input_data_topmost_sample: list[str] = []     # top X input data
-        self._input_data_nonskipped_sample: list[str] = []  # top X non-skipped input data
-        self._sample_parsed_input_data_memo: Optional[list[list[str]]] = None
+        self._input_data_topmost_sample = []     # top X input data
+        self._input_data_nonskipped_sample = []  # top X non-skipped input data
+        self._sample_parsed_input_data_memo = None
 
     @classmethod
-    def create(cls, file_path: Path) -> InputDataEntity:
+    def create(cls, file_path):
         """
         Create an instance of this class
         Return the created instance or raise an exception if an error occurred
         """
         entity = InputDataEntity()
         entity._file_path = file_path
-        assert file_path.is_file()
         entity._input_data_topmost_sample = []
         entity._input_data_nonskipped_sample = []
+
         try:
+
             with open(str(file_path)) as csvfile:
                 lines = csvfile.readlines()
                 entity._file_nrows = len(lines)
@@ -152,60 +148,73 @@ class InputDataEntity:
                 )
         except:
             raise Exception("Error when opening file")
+
         return entity
 
-    def guess_delimiter(self, valid_delimiters: list[str]) -> bool:
+    def guess_delimiter(self, valid_delimiters):
         """Guess the delimiter from the sample input data and update the value
         Return True if the guess was successful, else False
         """
         sample = "\n".join(self._input_data_topmost_sample)
         delimiters = "".join(valid_delimiters)
         format_sniffer = csv.Sniffer()
+
         try:
             csv_dialect = format_sniffer.sniff(sample, delimiters=delimiters)
         except csv.Error:  # Could be due to insufficient sample size, etc
             return False
+
         self.delimiter = csv_dialect.delimiter
+
         return True
 
-    def guess_header_is_included(self) -> bool:
+    def guess_header_is_included(self):
         """Guess if a header row is included in the sample input data and update the value
         Return True if the guess was successful, else False
         """
         sample = "\n".join(self._input_data_topmost_sample)
         format_sniffer = csv.Sniffer()
+
         try:
             self.header_is_included = format_sniffer.has_header(sample)
         except csv.Error:  # Could be due to insufficient sample size, etc
             return False
+
         return True
 
-    def guess_initial_lines_to_skip(self) -> bool:
+    def guess_initial_lines_to_skip(self):
         """Guess the initial number of lines to skip and update the value
         Return True if the guess was successful, else False
         """
         rows = [
             row.split(self.delimiter) if len(self.delimiter) > 0 else [row] for row in self._input_data_topmost_sample
         ]
+
         if len(rows) == 0:
             return True
+
         # Use the most frequent no. of columns as a proxy for the no. of columns of a 'clean' row
         _ncolumns_bincount = np.bincount([len(row) for row in rows])
         most_frequent_ncolumns = int(_ncolumns_bincount.argmax())  # type-casted to raise error for non-int values
+
         # Skip initial lines with mimatched number of columns
+
         count = 0
+
         for row in rows:
             if len(row) == most_frequent_ncolumns:
                 break
             count += 1
+
         # Assume the guess had failed if the guessed number is too much
         if count > self._NROWS_IN_SAMPLE_DATA * 0.9:
             self.initial_lines_to_skip = 0
             return False
+
         self.initial_lines_to_skip = count
         return True
 
-    def guess_model_name_n_column_assignments(self) -> bool:
+    def guess_model_name_n_column_assignments(self):
         """
         Guess the model name and column assignments, and mutate the appropariate states
         Return True if some guesses were successful, else False
@@ -213,20 +222,26 @@ class InputDataEntity:
         sample_parsed_csv_rows = self.sample_parsed_input_data
         nrows = len(sample_parsed_csv_rows)
         ncols = len(sample_parsed_csv_rows[0]) if nrows > 0 else 0
+
         if nrows == 0 or ncols == 0:
             return False
+
         quotes = '\'\"`'
         guessed_something = False
+
         for col_index in range(ncols):
+
             for row_index in range(nrows):
                 cell_value = sample_parsed_csv_rows[row_index][col_index].strip(quotes)
                 successful_guess_id = self._guess_model_name_n_column_assignments_util(cell_value, col_index)
+
                 if successful_guess_id != -1:
                     guessed_something = True
                     break
+
         return guessed_something
 
-    def _guess_model_name_n_column_assignments_util(self, cell_value: str, col_index: int) -> int:
+    def _guess_model_name_n_column_assignments_util(self, cell_value, col_index):
         """
         Return -1 if no guesses were made, or a non-negative integer if a guess was made
         Each type of successful guess is associated with a unique non-negative integer
@@ -249,27 +264,30 @@ class InputDataEntity:
         elif (cell_value == "Unit") or DataRuleRepository.query_label_in_units(cell_value):
             self.unit_colnum = col_index + 1
             return 5
+
         try:
-            # Reminder: int(<float value in str repr>) will raise an error
+            # Reminder(<float value in str repr>) will raise an error
             if (1000 < int(cell_value)) and (int(cell_value) < 9999):
                 self.year_colnum = col_index + 1
                 return 6
         except ValueError:
             pass
+
         try:
             float(cell_value)
             self.value_colnum = col_index + 1
             return 7
         except ValueError:
             pass
+
         return -1
 
     @property
-    def delimiter(self) -> str:
+    def delimiter(self):
         return self._delimiter
 
     @delimiter.setter
-    def delimiter(self, value: str) -> None:
+    def delimiter(self, value):
         self._delimiter = value
         # Reset column assignments and the parsed input data sample
         self._sample_parsed_input_data_memo = None
@@ -282,18 +300,18 @@ class InputDataEntity:
         self.value_colnum = 0
 
     @property
-    def file_path(self) -> Path:
+    def file_path(self):
         return self._file_path
 
     @property
-    def initial_lines_to_skip(self) -> int:
+    def initial_lines_to_skip(self):
         return self._initial_lines_to_skip
 
     @initial_lines_to_skip.setter
-    def initial_lines_to_skip(self, value: int) -> None:
-        assert value >= 0
+    def initial_lines_to_skip(self, value):
         self._initial_lines_to_skip = value
         self._sample_parsed_input_data_memo = None
+
         # Reset column assignments if all file content was skipped
         if value > self._file_nrows:
             self.scenario_colnum = 0
@@ -303,12 +321,16 @@ class InputDataEntity:
             self.unit_colnum = 0
             self.year_colnum = 0
             self.value_colnum = 0
+
         # Recompute input data sample
         if value == 0:
             self._input_data_nonskipped_sample = self._input_data_topmost_sample
             return
+
         self._input_data_nonskipped_sample = []
+
         try:
+
             with open(str(self.file_path)) as csvfile:
                 lines = csvfile.readlines()
                 self._input_data_topmost_sample = lines[: self._NROWS_IN_SAMPLE_DATA]
@@ -319,7 +341,7 @@ class InputDataEntity:
             return
 
     @property
-    def sample_parsed_input_data(self) -> list[list[str]]:
+    def sample_parsed_input_data(self):
         """
         Parse & process a subset of the raw input data and return the result
 
@@ -333,16 +355,20 @@ class InputDataEntity:
         Every time this property's dependencies (like delimiter) is updated, the memo must be reset.
         @date 7/6/21
         """
+
         if self._sample_parsed_input_data_memo is not None:
             return self._sample_parsed_input_data_memo
+
         # Split rows in the sample input data
         rows = [
             row.split(self.delimiter) if self.delimiter != "" else [row] for row in self._input_data_nonskipped_sample
         ]
+
         # Return if input data has no rows
         if len(rows) == 0:
             self._sample_parsed_input_data_memo = rows
             return rows
+
         # Use the most frequent number of columns in the sample data as a proxy for the number of columns in a clean row
         # NOTE: If the number of dirty rows > number of clean rows, we will have incorrect result here
         # @date 6/23/21
@@ -353,7 +379,7 @@ class InputDataEntity:
         self._sample_parsed_input_data_memo = rows
         return rows
 
-    def __str__(self) -> str:
+    def __str__(self):
         return f"""
         > Input Data Entity
         File path = {str(self.file_path)}
@@ -395,16 +421,16 @@ class InputDataDiagnosis:
     # File destination path for filtered output data
     FILTERED_OUTPUT_DSTPATH = _DOWNLOADDIR_PATH / "Filtered Output Data.csv"
 
-    def __init__(self) -> None:
+    def __init__(self):
         # Results of row checks
         self.nrows_w_struct_issue = 0
         self.nrows_w_ignored_scenario = 0
         self.nrows_duplicate = 0
         self.nrows_accepted = 0
         # Results of field checks
-        self.bad_labels: List[BadLabelInfo] = [] # Labels that violate data protocol but can be fixed automatically
-        self.unknown_labels: List[UnknownLabelInfo] = [] # Labels that violate data protocol but cannot be fixed automatically
-        self.unknown_years: Set[str] = set()   # Valid years that do not exist in the data protocol yet. Needs to be included
+        self.bad_labels = [] # Labels that violate data protocol but can be fixed automatically
+        self.unknown_labels = [] # Labels that violate data protocol but cannot be fixed automatically
+        self.unknown_years = set()   # Valid years that do not exist in the data protocol yet. Needs to be included
         # into the data protocol file so that we can generate the appropriate GAMS header file later
         # Private helper attributes
         # - information about input file
@@ -412,9 +438,9 @@ class InputDataDiagnosis:
         self._correct_ncolumns = 0
         self._largest_ncolumns = 0
         # - row occurrence dictionary for duplicate checking
-        self._row_occurence_dict: Dict[str, int] = {}
+        self._row_occurence_dict = {}
 
-    def rediagnose_n_filter_output_data(self, output_entity: OutputDataEntity) -> bool:  # type: ignore
+    def rediagnose_n_filter_output_data(self, output_entity): 
         """
         Re-diagnose and filter output data and store the result in the appropriate file. Return whether or not new
         issues were found after the re-diagnosis
@@ -423,41 +449,50 @@ class InputDataDiagnosis:
         never checked against the acceptable range. So, we want to check and filter them here.
         """
         has_new_issues = False
-        is_fixed_unknown_variable_or_unit: Callable[[UnknownLabelInfo], bool] = (
+        is_fixed_unknown_variable_or_unit = (
             lambda label_info: (label_info.associated_column == self.VARIABLE_COLNAME) or (label_info.associated_column == self.UNIT_COLNAME) and (label_info.fix != "")
         )
         fixed_variables_or_units = set(label_info.fix for label_info in self.unknown_labels if is_fixed_unknown_variable_or_unit(label_info))
         # TODO: Reimplement using vectorization techniques for better performance
         # TODO: Update files / attributes relating to accepted rows and rows with structural issue too
+
         with open(output_entity.file_path, "r") as outputfile, open(self.FILTERED_OUTPUT_DSTPATH, "w+") as filteredoutputfile:
             rows = outputfile.readlines()
             variable_colidx = output_entity.processed_data.columns.tolist().index(output_entity.VARIABLE_COLNAME)
             value_colidx = output_entity.processed_data.columns.tolist().index(output_entity.VALUE_COLNAME)
             unit_colidx = output_entity.processed_data.columns.tolist().index(output_entity.UNIT_COLNAME)
+
             for line in rows:
                 row = line.strip("\n ").split(",")
+
                 if len(row) == 0:
                     continue
+
                 value_field = row[value_colidx]
                 variable_field = row[variable_colidx]
                 unit_field = row[unit_colidx]
+
                 # Log unaffected rows (their variable field were not fixed/modified) into the destination file
                 if variable_field not in fixed_variables_or_units:
                     filteredoutputfile.write(line)
                     continue
+
                 # Get min/max value for the given variable and unit
                 min_value = DataRuleRepository.query_variable_min_value(variable_field, unit_field)
                 max_value = DataRuleRepository.query_variable_max_value(variable_field, unit_field)
+
                 # Ignore rows with out-of-bound values
                 if float(value_field) < min_value or float(value_field) > max_value:
                     has_new_issues = True
                     continue
+
                 # Log row with acceptable value
                 filteredoutputfile.write(line)
+
         return has_new_issues
 
     @classmethod
-    def create(cls, input_entity: InputDataEntity) -> InputDataDiagnosis:
+    def create(cls, input_entity):
         """
         Create an return an instance of this class
 
@@ -483,12 +518,12 @@ class InputDataDiagnosis:
         diagnosis._initialize_row_destination_files()
         diagnosis._input_entity = input_entity
         # Initialize sets to store found labels/fields
-        scenario_fields: Set[str] = set()
-        region_fields: Set[str] = set()
-        variable_fields: Set[str] = set()
-        item_fields: Set[str] = set()
-        year_fields: Set[str] = set()
-        unit_fields: Set[str] = set()
+        scenario_fields = set()
+        region_fields = set()
+        variable_fields = set()
+        item_fields = set()
+        year_fields = set()
+        unit_fields = set()
         # Initialize variables required to parse input file
         delimiter = input_entity.delimiter
         header_is_included = input_entity.header_is_included
@@ -502,6 +537,7 @@ class InputDataDiagnosis:
         value_colidx = input_entity.value_colnum - 1
         # Update private helper attributes
         diagnosis._update_ncolumns_info(input_entity)
+
         # Open all row destination files
         # fmt: off
         with \
@@ -514,20 +550,25 @@ class InputDataDiagnosis:
         # fmt: on
             # Get lines and ncolumns info from input file
             lines = inputfile.readlines()
+
             # Diagnose every line from the input file
             for line_index in range(len(lines)):
                 line = lines[line_index].strip("\n")
                 row = line.split(delimiter)
                 rownum = line_index + 1
+
                 # Ignore skipped row
                 if rownum <= initial_lines_to_skip:
                     continue
+
                 # Ignore header row
                 if (rownum == initial_lines_to_skip + 1) and header_is_included:
                     continue
+
                 # Ignore row that fails a row check
                 if diagnosis._diagnose_row(rownum, row, line, structissuefile, ignoredscenfile, duplicatesfile):
                     continue
+
                 # Log accepted row
                 diagnosis.nrows_accepted += 1
                 acceptedfile.write(line + "\n")
@@ -541,19 +582,27 @@ class InputDataDiagnosis:
                 year_fields.add(row[year_colidx].strip(_quotes_and_space))
                 # Parse value
                 diagnosis._diagnose_value_field(row[value_colidx].strip(_quotes_and_space))
+
         # Diagnose all found fields
+
         for scenario in scenario_fields:
             diagnosis._diagnose_scenario_field(scenario)
+
         for region in region_fields:
             diagnosis._diagnose_region_field(region)
+
         for variable in variable_fields:
             diagnosis._diagnose_variable_field(variable)
+
         for item in item_fields:
             diagnosis._diagnose_item_field(item)
+
         for year in year_fields:
             diagnosis._diagnose_year_field(year)
+
         for unit in unit_fields:
             diagnosis._diagnose_unit_field(unit)
+
         # Remove duplicates from bad/unknown labels table
         # Note: the reason we did not simply store the labels in a set is because the label classes are not safe to
         # be used with hashtable-based data structure
@@ -563,21 +612,14 @@ class InputDataDiagnosis:
 
     # Private util methods for row checks
 
-    def _diagnose_row(self, rownum: int, row: list[str], line: str, structissuefile: io.TextIOWrapper, ignoredscenfile: io.TextIOWrapper, duplicatesfile: io.TextIOWrapper) -> bool:
-        """
-        Check the given row for various issues
-        If a row fails a check, then it will be logged into the appropriate file
-        Return True if the row fails a check, else return False
-        """
-        if self._check_row_for_structural_issue(rownum, row, structissuefile):
-            return True
-        if self._check_row_for_ignored_scenario(rownum, row, ignoredscenfile):
-            return True
-        if self._check_if_duplicate_row(rownum, line, duplicatesfile):
-            return True
-        return False
+    def _diagnose_row(self, rownum, row, line, structissuefile, ignoredscenfile, duplicatesfile):
+        """Check given row for various issues."""
+        # If row fails a check, it will be logged into appropriate file
+        return self._check_row_for_structural_issue(rownum, row, structissuefile) or \
+               self._check_row_for_ignored_scenario(rownum, row, ignoredscenfile) or \
+               self._check_if_duplicate_row(rownum, line, duplicatesfile)
 
-    def _check_row_for_structural_issue(self, rownum: int, row: list[str], structissuefile: io.TextIOWrapper) -> bool:
+    def _check_row_for_structural_issue(self, rownum, row, structissuefile):
         """
         Checks if a row has a structural issue and logs it into the file if it has.
         Returns the result of the structural check.
@@ -592,42 +634,53 @@ class InputDataDiagnosis:
         @date July 7, 2021
         """
         self.nrows_w_struct_issue += 1  # Assume the row has a structural issue
+        
         if len(row) != self._correct_ncolumns:
             self._log_row_w_struct_issue(rownum, row, "Mismatched number of fields", structissuefile)
             return True
+        
         if row[self._input_entity.scenario_colnum - 1] == "":
             self._log_row_w_struct_issue(rownum, row, "Empty scenario field", structissuefile)
             return True
+        
         if row[self._input_entity.region_colnum - 1] == "":
             self._log_row_w_struct_issue(rownum, row, "Empty region field", structissuefile)
             return True
+        
         if row[self._input_entity.variable_colnum - 1] == "":
             self._log_row_w_struct_issue(rownum, row, "Empty variable field", structissuefile)
             return True
+        
         if row[self._input_entity.item_colnum - 1] == "":
             self._log_row_w_struct_issue(rownum, row, "Empty item field", structissuefile)
             return True
+        
         if row[self._input_entity.unit_colnum - 1] == "":
             self._log_row_w_struct_issue(rownum, row, "Empty unit field", structissuefile)
             return True
+        
         year_field = row[self._input_entity.year_colnum - 1]
+        
         if year_field == "":
             self._log_row_w_struct_issue(rownum, row, "Empty year field", structissuefile)
             return True
+        
         try:
             int(year_field)
         except:
             self._log_row_w_struct_issue(rownum, row, "Non-integer year field", structissuefile)
             return True
+        
         if self._check_row_for_value_w_structural_issue(rownum, row, structissuefile):
             return True
 
         self.nrows_w_struct_issue -= 1  # Substract the value back if the row does not have a struc. issue
         return False
 
-    def _check_row_for_value_w_structural_issue(self, rownum: int, row: list[str], structissuefile: io.TextIOWrapper) -> bool:
+    def _check_row_for_value_w_structural_issue(self, rownum, row, structissuefile):
         """Check if row has a value field with a structural issue and log it if it does"""
         value_field = row[self._input_entity.value_colnum - 1]
+        
         try:
             # Get fixed value
             value_fix = DataRuleRepository.query_fix_from_value_fix_table(value_field)
@@ -643,10 +696,12 @@ class InputDataDiagnosis:
             # Get min/max value for the given variable and unit
             min_value = DataRuleRepository.query_variable_min_value(matching_variable, matching_unit)
             max_value = DataRuleRepository.query_variable_max_value(matching_variable, matching_unit)
+
             if float(value_fix) < min_value:
                 issue_text = "Value for variable {} is smaller than {} {}".format(matching_variable, min_value, matching_unit)
                 self._log_row_w_struct_issue(rownum, row, issue_text, structissuefile)
                 return True
+
             if float(value_fix) > max_value:
                 issue_text = "Value for variable {} is greater than {} {}".format(matching_variable, max_value, matching_unit)
                 self._log_row_w_struct_issue(rownum, row, issue_text, structissuefile)
@@ -654,9 +709,10 @@ class InputDataDiagnosis:
         except:
             self._log_row_w_struct_issue(rownum, row, "Non-numeric value field", structissuefile)
             return True
+
         return False
 
-    def _check_row_for_ignored_scenario(self, rownum: int, row: list[str], ignoredscenfile: io.TextIOWrapper) -> bool:
+    def _check_row_for_ignored_scenario(self, rownum, row, ignoredscenfile):
         """
         Check if a row contains an ignored scenario and logs it into the given file if it does.
         Returns the result of the check.
@@ -667,9 +723,10 @@ class InputDataDiagnosis:
             ignoredscenfile.write(log_text)
             self.nrows_w_ignored_scenario += 1
             return True
+
         return False
 
-    def _check_if_duplicate_row(self, rownum: int, row: str, duplicatesfile: io.TextIOWrapper) -> bool:
+    def _check_if_duplicate_row(self, rownum, row, duplicatesfile):
         """
         Check if a row is a duplicate and log it into the duplicates file if it is.
         Return the result of the check.
@@ -680,16 +737,18 @@ class InputDataDiagnosis:
         self._row_occurence_dict.setdefault(row, 0)
         self._row_occurence_dict[row] += 1
         occurence = self._row_occurence_dict[row]
+
         if occurence > 1:
             log_text = "{},{},{}\n".format(rownum, row, occurence)
             duplicatesfile.write(log_text)
             self.nrows_duplicate += 1
             return True
+
         return False
 
     # Private util methods for field/label checks
 
-    def _diagnose_value_field(self, value: str) -> None:
+    def _diagnose_value_field(self, value):
         """Checks if a value exists in the fix table and logs it if it does"""
         fixed_value = DataRuleRepository.query_fix_from_value_fix_table(value)
         if fixed_value is not None:
@@ -698,28 +757,34 @@ class InputDataDiagnosis:
         else:
             float(value)  # Raise an error if it's non-numeric
 
-    def _diagnose_scenario_field(self, scenario: str) -> None:
+    def _diagnose_scenario_field(self, scenario):
         """Checks if a scenario is bad / unknown and logs it if it is"""
         scenario_w_correct_case = DataRuleRepository.query_matching_scenario(scenario)
+
         # Correct scenario
         if scenario_w_correct_case == scenario:
             return
+
         # Unkown scenario
         if scenario_w_correct_case is None:
             closest_scenario = DataRuleRepository.query_partially_matching_scenario(scenario)
             self._log_unknown_label(scenario, self.SCENARIO_COLNAME, closest_scenario)
             return
+
         # Known scenario but spelled wrongly
         if scenario_w_correct_case != scenario:
             self._log_bad_label(scenario, self.SCENARIO_COLNAME, scenario_w_correct_case)
 
-    def _diagnose_region_field(self, region: str) -> None:
+    def _diagnose_region_field(self, region):
         """Check if a region is bad or unknown and logs it if it is"""
         region_w_correct_case = DataRuleRepository.query_matching_region(region)
+
         # Correct region
         if region_w_correct_case == region:
             return
+
         fixed_region = DataRuleRepository.query_fix_from_region_fix_table(region)
+
         # Unknown region
         if (region_w_correct_case is None) and (fixed_region is None):
             closest_region = DataRuleRepository.query_partially_matching_region(region)
@@ -731,62 +796,71 @@ class InputDataDiagnosis:
         elif fixed_region is not None:
             self._log_bad_label(region, self.REGION_COLNAME, fixed_region)
 
-    def _diagnose_variable_field(self, variable: str) -> None:
+    def _diagnose_variable_field(self, variable):
         """Check if a variable is bad or unknown and logs it if it is"""
         variable_w_correct_case = DataRuleRepository.query_matching_variable(variable)
         # Correct variable
         if variable_w_correct_case == variable:
             return
+
         # Unkown variable
         if variable_w_correct_case is None:
             closest_variable = DataRuleRepository.query_partially_matching_variable(variable)
             self._log_unknown_label(variable, self.VARIABLE_COLNAME, closest_variable)
             return
+
         # Known variable but spelled wrongly
         if variable_w_correct_case != variable:
             self._log_bad_label(variable, self.VARIABLE_COLNAME, variable_w_correct_case)
 
-    def _diagnose_item_field(self, item: str) -> None:
+    def _diagnose_item_field(self, item):
         """Check if an item is bad or unknown and logs it if it is"""
         item_w_correct_case = DataRuleRepository.query_matching_item(item)
+
         # Correct item
         if item_w_correct_case == item:
             return
+
         # Unkown item
         if item_w_correct_case is None:
             closest_item = DataRuleRepository.query_partially_matching_item(item)
             self._log_unknown_label(item, self.ITEM_COLNAME, closest_item)
             return
+
         # Known item but spelled wrongly
         if item_w_correct_case != item:
             self._log_bad_label(item, self.ITEM_COLNAME, item_w_correct_case)
 
-    def _diagnose_year_field(self, year: str) -> None:
+    def _diagnose_year_field(self, year):
         """Check if a year is bad or unknown and logs it if it is"""
         # NOTE: This method assumes that rows with non-integer year value would have failed the row structural check,
         # so the following type-cast should never raise an error
         int(year)
+
         if not DataRuleRepository.query_label_in_years(year):
             self.unknown_years.add(year)  # Unknown years will be automatically recognized
 
-    def _diagnose_unit_field(self, unit: str) -> None:
+    def _diagnose_unit_field(self, unit):
         """Check if an unit is bad or unknown and logs it if it is"""
         unit_w_correct_case = DataRuleRepository.query_matching_unit(unit)
+
         # Correct unit
         if unit_w_correct_case == unit:
             return
+
         # Unkown unit
         if unit_w_correct_case is None:
             closest_unit = DataRuleRepository.query_partially_matching_unit(unit)
             self._log_unknown_label(unit, self.UNIT_COLNAME, closest_unit)
             return
+
         # Known unit but spelled wrongly
         if unit_w_correct_case != unit:
             self._log_bad_label(unit, self.UNIT_COLNAME, unit_w_correct_case)
 
     # Private util methods to log found errors/issues
 
-    def _log_row_w_struct_issue(self, rownum: int, row: list[str], issue_description: str, structissuefile: io.TextIOWrapper) -> None:
+    def _log_row_w_struct_issue(self, rownum, row, issue_description, structissuefile):
         """Return the log text for the given row with structural issue"""
         log_ncolumns = self._largest_ncolumns + 2
         log_row = [str(rownum), *row] + ["" for _ in range(log_ncolumns)]
@@ -795,11 +869,11 @@ class InputDataDiagnosis:
         log_text = ",".join(log_row) + "\n"
         structissuefile.write(log_text)
 
-    def _log_bad_label(self, bad_label: str, associated_column: str, fix: str) -> None:
+    def _log_bad_label(self, bad_label, associated_column, fix):
         """Logs bad label"""
         self.bad_labels.append(BadLabelInfo(bad_label, associated_column, fix))
 
-    def _log_unknown_label(self, unknown_label: str, associated_column: str, closest_label: str) -> None:
+    def _log_unknown_label(self, unknown_label, associated_column, closest_label):
         """Logs unknown label"""
         # Appending row 1 by 1 to a pandas dataframe is slow, so we store these rows in a list first
         self.unknown_labels.append(UnknownLabelInfo(unknown_label, associated_column, closest_label, fix="", override=False))
@@ -808,47 +882,56 @@ class InputDataDiagnosis:
 
     def _initialize_row_destination_files(self):
         """Create/Recreate destination files"""
+
         # Deletes existing files, if any
+
         if self.STRUCTISSUEROWS_DSTPATH.exists():
             self.STRUCTISSUEROWS_DSTPATH.unlink()
+
         if self.IGNOREDSCENARIOROWS_DSTPATH.exists():
             self.IGNOREDSCENARIOROWS_DSTPATH.unlink()
+
         if self.DUPLICATESROWS_DSTPATH.exists():
             self.DUPLICATESROWS_DSTPATH.unlink()
+
         if self.ACCEPTEDROWS_DSTPATH.exists():
             self.ACCEPTEDROWS_DSTPATH.unlink()
+
         # Create files
         self.STRUCTISSUEROWS_DSTPATH.touch()
         self.IGNOREDSCENARIOROWS_DSTPATH.touch()
         self.DUPLICATESROWS_DSTPATH.touch()
         self.ACCEPTEDROWS_DSTPATH.touch()
 
-    def _update_ncolumns_info(self, input_entity: InputDataEntity) -> None:
+    def _update_ncolumns_info(self, input_entity):
         """Get info about number of columns and populate the relevant private attributes"""
         self._correct_ncolumns = 0
         largest_ncolumns = 0
-        ncolumns_occurence_dict: Dict[int, int] = {}
+        ncolumns_occurence_dict = {}
+
         with open(str(input_entity.file_path)) as csvfile:
             lines = csvfile.readlines()
+
             for line in lines:
                 ncolumns = len(line.split(input_entity.delimiter))
                 ncolumns_occurence_dict.setdefault(ncolumns, 0)
                 ncolumns_occurence_dict[ncolumns] += 1
                 largest_ncolumns = max(largest_ncolumns, ncolumns)
         most_frequent_ncolumns = max(ncolumns_occurence_dict, key=lambda x: ncolumns_occurence_dict.get(x, -1))
-        assert most_frequent_ncolumns != -1
+
         # Use most frequent ncolumns as a proxy for the number of columns in a clean row
         self._correct_ncolumns = most_frequent_ncolumns
         self._largest_ncolumns = largest_ncolumns
 
     # Attempt to reimplement diagnose_data() with pandas
 
-    def _diagnose_data_with_pandas_attempt(self, input_entity: InputDataEntity) -> None:
+    def _diagnose_data_with_pandas_attempt(self, input_entity):
         """
         Attempt to reimplement parse data with pandas to gain better performance (WORK-IN-PROGRESS)
         TODO: Complete or reimplement this method
         """
         error_buffer = io.StringIO()
+
         with redirect_stderr(error_buffer):
             dataframe = pd.read_csv(
                 input_entity.file_path,
@@ -858,7 +941,7 @@ class InputDataDiagnosis:
                 warn_bad_lines=True,
                 na_filter=False
             )
-        assert isinstance(dataframe, pd.DataFrame)
+
         # Get important column names
         _colnames = dataframe.columns
         rownum_colname = "Row Number"
@@ -918,15 +1001,15 @@ class InputDataDiagnosis:
         rows_w_structissues.drop_duplicates()
         self.nrows_w_struct_issue = rows_w_structissues.shape[0]
         # Filter duplicate records
-        duplicates_df = _remaining_df[_remaining_df.duplicated()]
-        assert duplicates_df
+        _ = _remaining_df[_remaining_df.duplicated()]
         # TODO: build dataframes for rows with ignored scenario and accepted rows, and log them into a file
         # make sure to maintain the existing granularity level when logging the rows
 
-    def _get_fixed_value_or_dummy_value(self, value: str) -> float:
+    def _get_fixed_value_or_dummy_value(self, value):
         """Helper method for parse_data() implemented in pandas"""
         fix = DataRuleRepository.query_fix_from_value_fix_table(value)
         fix = fix if fix is not None else value
+
         try:
             return float(fix)
         except:
@@ -937,17 +1020,17 @@ class OutputDataEntity:
     """Domain entity for our processed/output data"""
 
     # Column names of the pandas dataframe that stores our processed data
-    MODEL_COLNAME: str = "Model name"
-    SCENARIO_COLNAME: str = "Scenario"
-    REGION_COLNAME: str = "Region"
-    VARIABLE_COLNAME: str = "Variable"
-    ITEM_COLNAME: str = "Item"
-    UNIT_COLNAME: str = "Unit"
-    YEAR_COLNAME: str = "Year"
-    VALUE_COLNAME: str = "Value"
+    MODEL_COLNAME = "Model name"
+    SCENARIO_COLNAME = "Scenario"
+    REGION_COLNAME = "Region"
+    VARIABLE_COLNAME = "Variable"
+    ITEM_COLNAME = "Item"
+    UNIT_COLNAME = "Unit"
+    YEAR_COLNAME = "Year"
+    VALUE_COLNAME = "Value"
 
-    def __init__(self) -> None:
-        self.file_path: Path = Path()
+    def __init__(self):
+        self.file_path = Path()
         # A pandas dataframe that store our processed data
         # Data frame specification
         # 1. follows the column arrangement dictated by the GlobalEcon team
@@ -956,13 +1039,13 @@ class OutputDataEntity:
         # @date Aug 5, 2021
         self.processed_data: pd.DataFrame = DataFrame()
         # Unique fields in the processed dataframe (sorted)
-        self.unique_scenarios: List[str] = []
-        self.unique_regions: List[str] = []
-        self.unique_variables: List[str] = []
-        self.unique_items: List[str] = []
-        self.unique_years: List[str] = []
+        self.unique_scenarios = []
+        self.unique_regions = []
+        self.unique_variables = []
+        self.unique_items = []
+        self.unique_years = []
 
-    def get_value_trends_table(self, scenario: str, region: str, variable: str) -> Optional[DataFrameGroupBy]:
+    def get_value_trends_table(self, scenario, region, variable):
         """
         Return a table for value trends visualization or None
         The table will be built from our processed data, and the arguments provided specify how the processed data
@@ -975,16 +1058,18 @@ class OutputDataEntity:
             & (processed_data[self.REGION_COLNAME] == region)
             & (processed_data[self.VARIABLE_COLNAME] == variable)
         ].copy()
+
         # Return if sliced data is empty
         if sliced_data.shape[0] == 0:
             self.valuetrends_viz_table = None
             return
+
         # Convert year and value column to numeric
         sliced_data[self.YEAR_COLNAME] = pd.to_numeric(sliced_data[self.YEAR_COLNAME])
         sliced_data[self.VALUE_COLNAME] = pd.to_numeric(sliced_data[self.VALUE_COLNAME])
         return sliced_data.groupby(self.ITEM_COLNAME)
 
-    def get_growth_trends_table(self, scenario: str, region: str, variable: str) -> Optional[DataFrameGroupBy]:
+    def get_growth_trends_table(self, scenario, region, variable):
         """
         Return a table for growth trends visualization or None
         The table will be built from our processed data, and the arguments provided specify how the processed data
@@ -999,17 +1084,19 @@ class OutputDataEntity:
             & (processed_data[self.REGION_COLNAME] == region)
             & (processed_data[self.VARIABLE_COLNAME] == variable)
         ].copy()
+
         # Return if sliced data is empty
         if sliced_data.shape[0] == 0:
             self.valuetrends_viz_table = None
             return
+
         # Convert year and value column to numeric
         sliced_data[self.YEAR_COLNAME] = pd.to_numeric(sliced_data[self.YEAR_COLNAME])
         sliced_data[self.VALUE_COLNAME] = pd.to_numeric(sliced_data[self.VALUE_COLNAME])
         return sliced_data.groupby(self.ITEM_COLNAME)
 
     @classmethod
-    def create(cls, input_entity: InputDataEntity, input_diagnosis: InputDataDiagnosis) -> OutputDataEntity:
+    def create(cls, input_entity, input_diagnosis):
         """
         Create and return an instance of this class
         TODO: Consider abstracting some functionalities in this class into a Factory class and a Service class
@@ -1069,11 +1156,13 @@ class OutputDataEntity:
         droppedyears = set()
         droppedunits = set()
         droppedvalues = set()
+
         # Populate the label mapping dictionaries based on the info about bad labels
         for bad_label_info in input_diagnosis.bad_labels:
             label = bad_label_info.label
             associatedcol = bad_label_info.associated_column
             fix = bad_label_info.fix
+
             if associatedcol == input_diagnosis.SCENARIO_COLNAME:
                 scenariomapping[label] = fix
             elif associatedcol == input_diagnosis.REGION_COLNAME:
@@ -1088,13 +1177,14 @@ class OutputDataEntity:
                 yearmapping[label] = fix
             elif associatedcol == input_diagnosis.VALUE_COLNAME:
                 valuemapping[label] = fix
+
         # Populate the label mapping dictionaries and dropped labels set based on the info about unknown labels
         for unknown_label_info in input_diagnosis.unknown_labels:
             label = unknown_label_info.label
             associatedcol = unknown_label_info.associated_column
             fix = unknown_label_info.fix
             override = unknown_label_info.override
-            assert not ((fix != "") and override)   # Assert that the label is not selected to be both fixed and overridden
+
             if fix != "":
                 # Remember fixes
                 if associatedcol == input_diagnosis.SCENARIO_COLNAME:
@@ -1161,7 +1251,7 @@ class OutputDataEntity:
         return output_entity
 
     @classmethod
-    def create_from_rediagnosed_n_filtered_output_data(cls, input_entity: InputDataEntity, input_data_diagnosis: InputDataDiagnosis) -> OutputDataEntity:
+    def create_from_rediagnosed_n_filtered_output_data(cls, input_entity, input_data_diagnosis):
         """Return an output data entity based by using existing output dataset that has been rediagnosed, and filtered"""
         # Read from accepted rows destination file
         processed_data = pd.read_csv(input_data_diagnosis.FILTERED_OUTPUT_DSTPATH, delimiter=input_entity.delimiter, header=None, dtype=object) # type: ignore
@@ -1199,7 +1289,7 @@ class OutputDataEntity:
         return output_entity
 
     @classmethod
-    def _populate_unique_fields(cls, output_entity: OutputDataEntity) -> None:
+    def _populate_unique_fields(cls, output_entity):
         """"
         Populate the lists of unique fields retrieved from the processed data frame.
         Each list must be sorted.
@@ -1224,7 +1314,7 @@ class OutputDataEntity:
 class DataRuleRepository:
     """Provide access to data rules from spreadsheet"""
 
-    __spreadsheet: Dict[str, DataFrame]  # Spreadsheet containing labels information
+    __spreadsheet = None  # Spreadsheet containing labels information
 
     # Valid labels table
     _model_table = None
@@ -1252,11 +1342,11 @@ class DataRuleRepository:
     _years = None
 
     # Data structure for critical queries
-    _matchingunit_memo: Dict[str, str] = {}
-    _matchingvariable_memo: Dict[str, str] = {}
-    _valuefix_memo: Dict[str, str] = {}
-    _variable_minvalue_memo: Dict[Tuple[str, str], float] = {}
-    _variable_maxvalue_memo: Dict[Tuple[str, str], float] = {}
+    _matchingunit_memo = {}
+    _matchingvariable_memo = {}
+    _valuefix_memo = {}
+    _variable_minvalue_memo = {}
+    _variable_maxvalue_memo = {}
 
     @classmethod
     def load(cls, shared_path, proj_path, subdir_path):
@@ -1323,120 +1413,116 @@ class DataRuleRepository:
             cls._variable_maxvalue_memo[(variable, unit)] = maxvalue
 
     @classmethod
-    def query_model_names(cls) -> List[str]:
+    def query_model_names(cls):
         """Get all valid model names"""
         result = list(cls._model_names)
         result.sort()
         return result
 
     @classmethod
-    def query_scenarios(cls) -> List[str]:
+    def query_scenarios(cls):
         """Get all valid scenarios"""
         result = list(cls._scenarios)
         result.sort()
         return result
 
     @classmethod
-    def query_regions(cls) -> List[str]:
+    def query_regions(cls):
         """Get all valid regions"""
         result = list(cls._regions)
         result.sort()
         return result
 
     @classmethod
-    def query_variables(cls) -> List[str]:
+    def query_variables(cls):
         """Get all valid variables"""
         result = list(cls._variables)
         result.sort()
         return result
 
     @classmethod
-    def query_items(cls) -> List[str]:
+    def query_items(cls):
         """Get all valid items """
         result = list(cls._items)
         result.sort()
         return result
 
     @classmethod
-    def query_units(cls) -> List[str]:
+    def query_units(cls):
         """Get all valid units """
         result = list(cls._units)
         result.sort()
         return result
 
     @classmethod
-    def query_label_in_model_names(cls, label: str) -> bool:
+    def query_label_in_model_names(cls, label):
         """Check if the argument exists in the model name table"""
         return label in cls._model_names
 
     @classmethod
-    def query_label_in_scenarios(cls, label: str) -> bool:
+    def query_label_in_scenarios(cls, label):
         """Check if the argument exists in the scenario table"""
         return label in cls._scenarios
 
     @classmethod
-    def query_label_in_regions(cls, label: str) -> bool:
+    def query_label_in_regions(cls, label):
         """Check if the argument exists in the region table"""
         return label in cls._regions
 
     @classmethod
-    def query_label_in_variables(cls, label: str) -> bool:
+    def query_label_in_variables(cls, label):
         """Check if the argument exists in the variable table"""
         return label in cls._variables
 
     @classmethod
-    def query_label_in_items(cls, label: str) -> bool:
+    def query_label_in_items(cls, label):
         """Check if the argument exists in the item table"""
         return label in cls._items
 
     @classmethod
-    def query_label_in_units(cls, label: str) -> bool:
+    def query_label_in_units(cls, label):
         """Check if the argument exists in the unit table"""
         return label in cls._units
 
     @classmethod
-    def query_label_in_years(cls, label: str) -> bool:
+    def query_label_in_years(cls, label):
         """Check if the argument exists in the years table"""
         return label in cls._years
 
     @classmethod
-    def query_matching_scenario(cls, scenario: str) -> Optional[str]:
+    def query_matching_scenario(cls, scenario):
         """Returns a scenario with the exact case-insensitive spelling as the argument, or None"""
         scenario = scenario.lower()
         table = cls._scenario_table
         table = table[table["Scenario"].str.lower() == scenario]
-        assert table.shape[0] <= 1
         if table.shape[0] != 0:
             return str(table.iloc[0]["Scenario"])  # type: ignore
         return None
 
     @classmethod
-    def query_partially_matching_scenario(cls, scenario: str) -> str:
+    def query_partially_matching_scenario(cls, scenario):
         """Returns a scenario with the closest spelling to the argument"""
         matches = difflib.get_close_matches(scenario, cls._scenarios, n=1, cutoff=0)
-        assert len(matches) != 0
         return matches[0]
 
     @classmethod
-    def query_matching_region(cls, region: str) -> Optional[str]:
+    def query_matching_region(cls, region):
         """Returns a region with the exact case-insensitive spelling as the argument, or None"""
         region = region.lower()
         table = cls._region_table
         table = table[table["Region"].str.lower() == region]
-        assert table.shape[0] <= 1
         if table.shape[0] != 0:
             return str(table.iloc[0]["Region"])  # type: ignore
         return None
 
     @classmethod
-    def query_partially_matching_region(cls, region: str) -> str:
+    def query_partially_matching_region(cls, region):
         """Returns a region with the closest spelling to the argument"""
         matches = difflib.get_close_matches(region, cls._regions, n=1, cutoff=0)
-        assert len(matches) != 0
         return matches[0]
 
     @classmethod
-    def query_matching_variable(cls, variable: str) -> Optional[str]:
+    def query_matching_variable(cls, variable):
         """Returns a variable with the exact case-insensitive spelling as the argument, or None"""
         variable = variable.lower()
         try:
@@ -1445,69 +1531,68 @@ class DataRuleRepository:
             return None
 
     @classmethod
-    def query_partially_matching_variable(cls, variable: str) -> str:
+    def query_partially_matching_variable(cls, variable):
         """Returns a variable with the closest spelling to the argument"""
         matches = difflib.get_close_matches(variable, cls._variables, n=1, cutoff=0)
-        assert len(matches) != 0
         return matches[0]
 
     @classmethod
-    def query_matching_item(cls, item: str) -> Optional[str]:
+    def query_matching_item(cls, item):
         """Returns an item with the exact case-insensitive spelling as the argument, or None"""
         item = item.lower()
         table = cls._item_table
         table = table[table["Item"].str.lower() == item]
-        assert table.shape[0] <= 1
         if table.shape[0] != 0:
             return str(table.iloc[0]["Item"])  # type: ignore
         return None
 
     @classmethod
-    def query_partially_matching_item(cls, item: str) -> str:
+    def query_partially_matching_item(cls, item):
         """Returns a item with the closest spelling to the argument"""
         matches = difflib.get_close_matches(item, cls._items, n=1, cutoff=0)
-        assert len(matches) != 0
         return matches[0]
 
     @classmethod
-    def query_matching_unit(cls, unit: str) -> Optional[str]:
+    def query_matching_unit(cls, unit):
         """Returns an unit with the exact case-insensitive spelling as the argument, or None"""
         unit = unit.lower()
+
         try:
             return cls._matchingunit_memo[unit]
         except:
             return None
 
     @classmethod
-    def query_partially_matching_unit(cls, unit: str) -> str:
+    def query_partially_matching_unit(cls, unit):
         """Returns a unit with the closest spelling to the argument"""
         matches = difflib.get_close_matches(unit, cls._units, n=1, cutoff=0)
-        assert len(matches) != 0
         return matches[0]
 
     @classmethod
-    def query_fix_from_value_fix_table(cls, value: str) -> Optional[str]:
+    def query_fix_from_value_fix_table(cls, value):
         """Checks if a fix exists in the fix table and returns it. Returns None otherwise."""
         fix_table = cls._valuefix_memo
+
         try:
             return fix_table[value.lower()]
         except:
             return None
 
     @classmethod
-    def query_fix_from_region_fix_table(cls, region: str) -> Optional[str]:
+    def query_fix_from_region_fix_table(cls, region):
         """Checks if a fix exists in the fix table and returns it. Returns None otherwise."""
         fix_table = cls._regionfix_table
         # Get all rows containing the fix
         fix_table = fix_table[fix_table["Region"] == region.lower()]
-        assert fix_table.shape[0] <= 1
+
         # Fix was found
         if fix_table.shape[0] != 0:
             return str(fix_table.iloc[0]["Fix"])
+
         return None
 
     @classmethod
-    def query_variable_min_value(cls, variable: str, unit: str) -> float:
+    def query_variable_min_value(cls, variable, unit) -> float:
         """Return the minimum value for a variable"""
         if (variable, unit) in cls._variable_minvalue_memo.keys():
             return float(cls._variable_minvalue_memo[(variable, unit)])
@@ -1515,7 +1600,7 @@ class DataRuleRepository:
             return -math.inf
 
     @classmethod
-    def query_variable_max_value(cls, variable: str, unit: str) -> float:
+    def query_variable_max_value(cls, variable, unit) -> float:
         """Return the maximum value for a variable"""
         if (variable, unit) in cls._variable_maxvalue_memo.keys():
             return float(cls._variable_maxvalue_memo[(variable, unit)])

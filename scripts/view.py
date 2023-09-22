@@ -1,14 +1,9 @@
-from __future__ import annotations  # Delay the evaluation of undefined types
-
 import numpy as np
 import ipywidgets as ui
-
 from IPython.core.display import Javascript, clear_output, display, HTML
 from pandas.core.frame import DataFrame
 from matplotlib import pyplot as plt
 from threading import Timer
-from typing import Callable, Optional, List, Tuple
-
 from .utils import *
 
 
@@ -16,11 +11,8 @@ PLOT_HEIGHT = 11
 PLOT_WIDTH = 5.5
 
 
-def set_dropdown_options(widget: ui.Dropdown, options: Tuple | List, onchange_callback) -> None:
-    """
-    Utility function to reassign options without triggering onchange callback.
-    The options will be sorted first.
-    """
+def set_dropdown_options(widget: ui.Dropdown, options, onchange_callback):
+    """Reassign options w/o triggering onchange callback, options will be sorted first."""
     widget.unobserve(onchange_callback, "value")
     widget.options = sorted(options)
     widget.value = None
@@ -28,9 +20,8 @@ def set_dropdown_options(widget: ui.Dropdown, options: Tuple | List, onchange_ca
 
 
 class View:
-    DATA_SPEC_PAGE_IS_BEING_UPDATED = (
-        False  # to assert that a page update will not recursively trigger another page update
-    )
+    # Ensure page update will not recursively trigger another page update
+    DATA_SPEC_PAGE_IS_BEING_UPDATED = (False)
 
     def __init__(self):
         # Import MVC classes here to prevent circular import problem
@@ -38,78 +29,19 @@ class View:
         from .model import Model
 
         # MVC objects self.model: Model
-        self.model: Model = Model()
-        self.ctrl: Controller = Controller()
+        self.model = Model()
+        self.ctrl = Controller()
 
-        # Base app's widgets that need to be manipulated
-        self.app_container: ui.Box
-        self.app_title: ui.HTML
-        self.app_header: ui.Box
-        self.app_body: ui.Box
-        self.user_mode_button: ui.Button
-        self.user_page_stepper: ui.Box
-        self.user_page_container: ui.Box
-        self.user_mode_btn: ui.Button
-        self.admin_mode_btn: ui.Button
-        self.admin_page: ui.Box
-        self.notification: ui.Box
-        self._notification_timer: Timer = Timer(0.0, lambda x: None)
-        # Admin page's widgets that need to be manipulated
-        self.submissions_tbl: ui.HTML
-        # File upload page's widgets that need to be manipulated
-        self.ua_file_label: ui.Label  # ua here stands for "upload area"
-        self.uploaded_file_name_box: ui.Box
-        # Data specification page's widgets that need to be manipulated
-        # - parsing widgets
-        self.model_name_ddown: ui.Dropdown
-        self.delimiter_ddown: ui.Dropdown
-        self.header_is_included_chkbox: ui.Checkbox
-        self.lines_to_skip_txt: ui.Text
-        self.scenarios_to_ignore_txt: ui.Textarea
-        # - column assignment widgets
-        self.model_name_lbl: ui.Label
-        self.scenario_column_ddown: ui.Dropdown
-        self.region_column_ddown: ui.Dropdown
-        self.variable_column_ddown: ui.Dropdown
-        self.item_column_ddown: ui.Dropdown
-        self.unit_column_ddown: ui.Dropdown
-        self.year_column_ddown: ui.Dropdown
-        self.value_column_ddown: ui.Dropdown
-        # - preview tables
-        self.input_data_preview_tbl: ui.GridBox
-        self.output_data_preview_tbl: ui.GridBox
-        self._input_data_table_childrenpool: list[ui.Box] = []
-        # Integrity checking page's widgets that need to be manipulated
-        self.duplicate_rows_lbl: ui.Label
-        self.rows_w_struct_issues_lbl: ui.Label
-        self.rows_w_ignored_scenario_lbl: ui.Label
-        self.accepted_rows_lbl: ui.Label
-        self.bad_labels_tbl: ui.HTML
-        self.unknown_labels_tbl: ui.GridBox
-        self._unknown_labels_tbl_cell_pool: list[ui.Box] = []
-        # Plausibility checking page's widgets that need to be manipulated
-        # - visualization tab elements & tab contents
-        self.valuetrends_tabelement: ui.Box
-        self.valuetrends_tabcontent: ui.Box
-        self.growthtrends_tabelement: ui.Box
-        self.growthtrends_tabcontent: ui.Box
-        # - value trends visualization widgets
-        self.valuetrends_scenario_ddown: ui.Dropdown
-        self.valuetrends_region_ddown: ui.Dropdown
-        self.valuetrends_variable_ddown: ui.Dropdown
-        self.valuetrends_viz_output: ui.Output
-        # - growth trends visualization widgets
-        self.growthtrends_scenario_ddown: ui.Dropdown
-        self.growthtrends_region_ddown: ui.Dropdown
-        self.growthtrends_variable_ddown: ui.Dropdown
-        self.growthtrends_viz_output: ui.Output
+        self._notification_timer = Timer(0.0, None)
+        self._input_data_table_childrenpool = []
+        self._unknown_labels_tbl_cell_pool = []
 
-    def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
+    def intro(self, model, ctrl):  # type: ignore # noqa
         """Introduce MVC modules to each other"""
         self.model = model
         self.ctrl = ctrl
 
-    def display(self) -> None:
+    def display(self):
         """Build and show notebook user interface"""
         self.app_container = self._build_app()
         # Display the appropriate html files and our ipywidgets app
@@ -121,21 +53,18 @@ class View:
         display(HTML(f"<script> APP_MODEL = {javascript_model.serialize()}</script>"))
         display(HTML(filename="script.html"))
 
-    def modify_cursor_style(self, new_cursor_mod_class: Optional[str]) -> None:
-        """
-        Change cursor style by assigning the passed CSS class to the app's DOM
-        If None was passed, the cursor style will be reset
-        """
+    def modify_cursor_style(self, new_cursor_mod_class):
+        """Change cursor style."""
         cursor_mod_classes = CSS.get_cursor_mod_classes()
+
         for cursor_mod_class in cursor_mod_classes:  # Remove all other cursor mods from DOM
             self.app_container.remove_class(cursor_mod_class)
+        
         if new_cursor_mod_class is not None:
-            assert new_cursor_mod_class in cursor_mod_classes
             self.app_container.add_class(new_cursor_mod_class)
 
-    def show_notification(self, variant: str, content: str) -> None:
-        """Display a notification to the user"""
-        assert variant in Notification._VARIANTS
+    def show_notification(self, variant, content):
+        """Display a notification to the user."""
         # Cancel existing timer if it's still running
         self._notification_timer.cancel()
         # Reset the notification's DOM classes
@@ -146,8 +75,8 @@ class View:
         self.notification._dom_classes = (CSS.NOTIFICATION,)
         # Update notification content
         notification_text = self.notification.children[1]
-        assert isinstance(notification_text, ui.Label)
         notification_text.value = content
+
         # Update notification visibility & style
         if variant == Notification.SUCCESS:
             self.notification.children = (Notification.SUCCESS_ICON, notification_text)
@@ -166,16 +95,14 @@ class View:
             self.notification._dom_classes = (CSS.NOTIFICATION, CSS.NOTIFICATION__SHOW, CSS.NOTIFICATION__ERROR)
             notification_text._dom_classes = (CSS.COLOR_MOD__WHITE,)
         else:
-            assert len("Variant does not exists") == 0
+            print("Variant does not exists")
+        
         # Create a timer to hide notification after X seconds
         self._notification_timer = Timer(3.5, self.notification.remove_class, args=[CSS.NOTIFICATION__SHOW])
         self._notification_timer.start()
 
-    def show_modal_dialog(self, title: str, body: str) -> None:
-        """
-        Show modal dialog
-        NOTE: The current method to display a modal dialog requires the title/body argument to not have a newline
-        """
+    def show_modal_dialog(self, title, body):
+        # NOTE: Current method to display modal dialog requires title/body arg to not have newline
         data = """
             require(
                 ["base/js/dialog"],
@@ -195,20 +122,17 @@ class View:
         )
         display(Javascript(data=data, css="modal.css"))
 
-    def update_base_app(self) -> None:
-        """Update the base app"""
+    def update_base_app(self):
         # Create helper variables
         NUM_OF_PAGES = len(self.user_page_container.children)
-        assert self.model.current_user_page > 0 and self.model.current_user_page <= NUM_OF_PAGES
-        assert self.model.furthest_active_user_page > 0 and self.model.furthest_active_user_page <= NUM_OF_PAGES
         current_page_index = self.model.current_user_page - 1
+
         # Update visibility of pages and style of page stepper elements
         for page_index in range(0, NUM_OF_PAGES):
             # Get page and stepper element
             page = self.user_page_container.children[page_index]
             stepper_element = self.user_page_stepper.children[page_index]
-            assert isinstance(page, ui.Box)
-            assert isinstance(stepper_element, ui.Box)
+
             if page_index == current_page_index:
                 # Show the page and style the stepper element apropriately
                 page.remove_class(CSS.DISPLAY_MOD__NONE)
@@ -227,21 +151,26 @@ class View:
             self.user_page_container.remove_class(CSS.DISPLAY_MOD__NONE)
             self.user_page_stepper.remove_class(CSS.DISPLAY_MOD__NONE)
             self.app_body.children = [self.user_page_stepper, self.user_page_container]
+
         if self.model.application_mode == ApplicationMode.ADMIN:
             self.app_header.children = [self.app_title, self.admin_mode_btn]
             self.user_page_container.add_class(CSS.DISPLAY_MOD__NONE)
             self.user_page_stepper.add_class(CSS.DISPLAY_MOD__NONE)
             table_rows = ""
             cur_len = 0
+
             for row in self.model.get_submitted_files_info():
                 table_rows += "<tr>"
+
                 for colidx in range(len(row)):
                     field = row[colidx]
                     table_rows += f"<td>{field}</td>"
                 table_rows += "</tr>"
                 cur_len += 1
+
             for _ in range(cur_len, 15):
                 table_rows += "<tr><td>-</td><td>-</td><td>-</td></tr>"
+
             self.submissions_tbl.value = f"""
                 <table class="table">
                     <thead>
@@ -255,16 +184,16 @@ class View:
                 </table>
             """
 
-            # NOTE: It is important for us to NOT remove user pages from DOM tree even when going into admin mode. Else,
-            # the event handler registration that we do in the Javascript context (e.g. for file upload) will no longer work
+            # NOTE: DO NOT remove user pages from DOM tree even when going into admin mode. 
+            #       Would break event handler registration done in JS context (e.g. for file upload) 
             self.app_body.children = [self.user_page_stepper, self.user_page_container, self.admin_page]
 
-    def update_file_upload_page(self) -> None:
-        """Update the file upload page"""
+    def update_file_upload_page(self):
         # Update the file name snackbar
-        children_: Tuple[ui.HTML, ui.Box] = self.uploaded_file_name_box.children
+        children_ = self.uploaded_file_name_box.children
         no_file_uploaded_widget = children_[0]
         file_uploaded_widget = children_[1]
+
         if self.model.uploadedfile_name != "":
             # Show "No file was uploaded"
             no_file_uploaded_widget.add_class(CSS.DISPLAY_MOD__NONE)
@@ -276,12 +205,11 @@ class View:
             # Show the name of the uploaded file
             file_uploaded_widget.add_class(CSS.DISPLAY_MOD__NONE)
             no_file_uploaded_widget.remove_class(CSS.DISPLAY_MOD__NONE)
+
         # Reset the hidden filename value
         self.ua_file_label.value = ""
 
     def update_data_specification_page(self):
-        """Update the state of data specification page"""
-        assert self.DATA_SPEC_PAGE_IS_BEING_UPDATED != True
         self.DATA_SPEC_PAGE_IS_BEING_UPDATED = True
         # Update input format specification widgets
         set_dropdown_options(
@@ -315,54 +243,59 @@ class View:
         table_content = self.model.input_data_preview_content
         number_of_columns = table_content.shape[1]
         table_content = table_content.flatten()
+
         # - increase pool size if it's insufficient
         if len(table_content) > len(self._input_data_table_childrenpool):
             pool_addition = [ui.Box(children=[ui.Label(value="")]) for _ in range(len(table_content))]
             self._input_data_table_childrenpool += pool_addition
+
         content_index = 0
-        assert self._input_data_table_childrenpool is not None
+
         for content in table_content:
             content_box = self._input_data_table_childrenpool[content_index]
-            assert isinstance(content_box, ui.Box)
             content_label = content_box.children[0]
-            assert isinstance(content_label, ui.Label)
             content_label.value = content
             content_index += 1
+
         self.input_data_preview_tbl.children = self._input_data_table_childrenpool[: table_content.size]
         self.input_data_preview_tbl.layout.grid_template_columns = f"repeat({number_of_columns}, 1fr)"
         # Update the output the data preview table
         # TODO: implement this table with an ipywidgets HTML instead of GridBox
         table_content = self.model.output_data_preview_content
         table_content = table_content.flatten()
-        assert table_content.size == len(self.output_data_preview_tbl.children)
         content_index = 0
+
         for content in table_content:
             content_box = self.output_data_preview_tbl.children[content_index]
-            assert isinstance(content_box, ui.Box)
             content_label = content_box.children[0]
-            assert isinstance(content_label, ui.Label)
             content_label.value = table_content[content_index]
             content_index += 1
         self.DATA_SPEC_PAGE_IS_BEING_UPDATED = False
 
-    def update_integrity_checking_page(self) -> None:
-        """Update the integrity checking page"""
+    def update_integrity_checking_page(self):
         # Update the row summary labels
         self.rows_w_struct_issues_lbl.value = "{:,}".format(self.model.nrows_w_struct_issue)
         self.rows_w_ignored_scenario_lbl.value = "{:,}".format(self.model.nrows_w_ignored_scenario)
         self.duplicate_rows_lbl.value = "{:,}".format(self.model.nrows_duplicates)
         self.accepted_rows_lbl.value = "{:,}".format(self.model.nrows_accepted)
+
         # Update the bad labels overview table
+
         _table_rows = ""
+
         for row in self.model.bad_labels_overview_tbl:
             _table_rows += "<tr>"
+
             for colidx in range(len(row)):
                 field = row[colidx]
+
                 if colidx == 1:  # If middle field / "Associated column" field
                     _table_rows += f"<td>{field}</td>"
                 else:
                     _table_rows += f'<td title="{field}">{field}</td>'
+
             _table_rows += "</tr>"
+
         self.bad_labels_tbl.value = f"""
             <table>
                 <thead>
@@ -377,20 +310,18 @@ class View:
             """
         self._update_unknown_labels_overview_table()
 
-    def _update_unknown_labels_overview_table(self) -> None:
-        """
-        Update the unknown labels overview table
-        Refer to the documentation surrounding the initialization of this table to understand how it was built
-        and how it needs to be updated. @date Aug 3, 2021
-        """
+    def _update_unknown_labels_overview_table(self):
+        # NOTE: Refer to docs on init of this table 
         # Calculate helper variables
         NCOLS = 5
         nrowsneeded = len(self.model.unknown_labels_overview_tbl)
         nrowssupported = int(  # We deduct NCOLS from the calculation to exclude the header row
             (len(self._unknown_labels_tbl_cell_pool) - NCOLS) / NCOLS
         )
+
         # Enlarge the children pool if needed
         if nrowsneeded > nrowssupported:
+
             # Create enough child cells to form the missing rows
             # Note: each row in this table is in the form of [label, label, label, dropdown, checkbox]
             for row_index in range(nrowssupported, nrowsneeded):
@@ -413,6 +344,7 @@ class View:
                     ui.Box(children=[dropdown]),
                     ui.Box(children=[checkbox]),
                 ]
+
         # Update the values being displayed at each row
         for row_index in range(nrowsneeded):
             # Get the cell widgets for this row
@@ -421,25 +353,16 @@ class View:
                 cell_wrapper.children[0]
                 for cell_wrapper in self._unknown_labels_tbl_cell_pool[cellpoolstartindex : cellpoolstartindex + 5]
             ]
-            assert isinstance(unknownlabel_w, ui.HTML)
-            assert isinstance(associatedcolumn_w, ui.HTML)
-            assert isinstance(closestmatch_w, ui.HTML)
-            assert isinstance(fix_w, ui.Dropdown)
-            assert isinstance(override_w, ui.Checkbox)
             # Get the cell values for this row from model
             row = self.model.unknown_labels_overview_tbl[row_index]
             unknownlabel, associatedcolumn, closestmatch, fix, override = row
-            assert isinstance(unknownlabel, str)
-            assert isinstance(associatedcolumn, str)
-            assert isinstance(closestmatch, str)
-            assert isinstance(fix, str)
-            assert isinstance(override, bool)
             # Update cell widgets based on the retrieved values from model
             get_hoverable_html = lambda value: f"<span title={value}>{value}</span>"
             unknownlabel_w.value = get_hoverable_html(unknownlabel)
             associatedcolumn_w.value = associatedcolumn
             closestmatch_w.value = get_hoverable_html(closestmatch)
             fix_w.value = None
+
             if associatedcolumn == "-":
                 fix_w.options = [""]
             elif associatedcolumn == "Scenario":
@@ -454,15 +377,17 @@ class View:
                 fix_w.options = ["", *self.model.VALID_UNITS]
             else:
                 raise Exception("Unexpected associated column")
+
             fix_w.value = fix
             override_w.value = override
+
         # Assign the required rows to the table
         self.unknown_labels_tbl.children = self._unknown_labels_tbl_cell_pool[: (nrowsneeded + 1) * 5]
 
-    def update_plausibility_checking_page(self) -> None:
-        """Update the plausibility checking page"""
+    def update_plausibility_checking_page(self):
         # Update the style and visibility of tab elements and tab content
-        is_active: Callable[[VisualizationTab], bool] = lambda tab: self.model.active_visualization_tab == tab
+        is_active = lambda tab: self.model.active_visualization_tab == tab
+
         # - update the style and visibility of value trends tab element & content
         if is_active(VisualizationTab.VALUE_TRENDS):
             self.valuetrends_tabelement.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
@@ -470,6 +395,7 @@ class View:
         else:
             self.valuetrends_tabelement.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
             self.valuetrends_tabcontent.add_class(CSS.DISPLAY_MOD__NONE)
+
         # - update the style & visibility of growth trends tab element & content
         if is_active(VisualizationTab.GROWTH_TRENDS):
             self.growthtrends_tabelement.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
@@ -477,6 +403,7 @@ class View:
         else:
             self.growthtrends_tabelement.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
             self.growthtrends_tabcontent.add_class(CSS.DISPLAY_MOD__NONE)
+
         # Update the dropdown options and values in the value trends tab
         # - scenario dropdown
         set_dropdown_options(
@@ -510,17 +437,19 @@ class View:
         )
         self.growthtrends_variable_ddown.value = self.model.growthtrends_variable
 
-    def update_value_trends_chart(self) -> None:
-        """Visualize value trends"""
+    def update_value_trends_chart(self):
         # TODO: Fix legends possitioning issue
+
         with self.valuetrends_viz_output:
             clear_output(wait=True)
             _, axes = plt.subplots(figsize=(PLOT_HEIGHT, PLOT_WIDTH))  # size in inches
+
             if self.model.valuetrends_table is not None:
                 # Make sure we have enough colors for all lines
                 # https://stackoverflow.com/a/35971096/16133077
                 num_plots = self.model.valuetrends_table.ngroups
                 axes.set_prop_cycle(plt.cycler("color", plt.cm.jet(np.linspace(0, 1, num_plots))))  # type: ignore
+
                 # Multi-line chart
                 # https://stackoverflow.com/questions/29233283/plotting-multiple-lines-in-different-colors-with-pandas-dataframe?answertab=votes#tab-top
                 for key, group in self.model.valuetrends_table:
@@ -531,27 +460,29 @@ class View:
                         y=self.model.valuetrends_table_value_colname,
                         label=key,
                     )
+
             axes.set_xlabel("Year")
             axes.set_ylabel("Value")
             plt.title("Value Trends")
             plt.grid()
             plt.show()
 
-    def update_growth_trends_chart(self) -> None:
-        """Visualize growth trends"""
+    def update_growth_trends_chart(self):
         # TODO: Fix legends possitioning issue
+
         with self.growthtrends_viz_output:
             clear_output(wait=True)
             _, axes = plt.subplots(figsize=(PLOT_HEIGHT, PLOT_WIDTH))  # size in inches
+
             if self.model.growthtrends_table is not None:
                 # Make sure we have enough colors for all lines
                 # https://stackoverflow.com/a/35971096/16133077
                 num_plots = self.model.growthtrends_table.ngroups
                 axes.set_prop_cycle(plt.cycler("color", plt.cm.jet(np.linspace(0, 1, num_plots))))  # type: ignore
+
                 # Multi-line chart
                 # https://stackoverflow.com/questions/29233283/plotting-multiple-lines-in-different-colors-with-pandas-dataframe?answertab=votes#tab-top
                 for key, group in self.model.growthtrends_table:
-                    assert isinstance(group, DataFrame)
                     axes = group.plot(
                         ax=axes,
                         kind="line",
@@ -559,15 +490,14 @@ class View:
                         y=self.model.growthtrends_table_value_colname,
                         label=key,
                     )
+
             axes.set_xlabel("Year")
             axes.set_ylabel("Growth Value")
             plt.title("Growth Rate Trends")
             plt.grid()
             plt.show()
 
-    def _build_app(self) -> ui.Box:
-        """Build the application"""
-        # Constants
+    def _build_app(self):
         APP_TITLE = "AgMIP GlobalEcon Data Submission"
         # Create notification widget
         # TODO: Make notification text an attribute
@@ -579,6 +509,7 @@ class View:
         PAGE_TITLES = ["File Upload", "Data Specification", "Integrity Checking", "Plausibility Checking"]
         NUM_OF_PAGES = len(PAGE_TITLES)
         stepper_children = []
+
         for page_index in range(0, NUM_OF_PAGES):
             stepper_element_number = ui.HTML(value=str(page_index + 1))
             stepper_element_number.add_class(CSS.STEPPER_EL__NUMBER)
@@ -594,7 +525,9 @@ class View:
             stepper_element.add_class(CSS.STEPPER_EL)
             stepper_element.add_class(CSS.STEPPER_EL__CURRENT if page_index == 0 else CSS.STEPPER_EL__INACTIVE)
             stepper_children.append(stepper_element)
+
         self.user_page_stepper = ui.HBox(children=stepper_children)
+
         # - create user pages & user page container
         self.user_page_container = ui.Box(
             children=[
@@ -605,8 +538,10 @@ class View:
             ],
             layout=ui.Layout(flex="1", width="100%"),  # page container stores the current page
         )
+
         for page in self.user_page_container.children[1:]:  # hide all pages, except for the first one
             page.add_class(CSS.DISPLAY_MOD__NONE)
+
         # Create admin mode widgets
         self.admin_page = self._build_admin_page()
         # Create app header
@@ -633,8 +568,7 @@ class View:
         app.add_class(CSS.APP)
         return app
 
-    def _build_file_upload_page(self) -> ui.Box:
-        """Build the file upload page"""
+    def _build_file_upload_page(self):
         # Create the upload area component (or ua for short)
         # - create the hidden file label
         # - upon successful upload, our Javascript code will notify the backend code the name of the uploaded file by
@@ -750,9 +684,7 @@ class View:
             layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
         )
 
-    def _build_data_specification_page(self) -> ui.Box:
-        """Build the data specification page"""
-        # Create control widgets
+    def _build_data_specification_page(self):
         # - create control widgets for the input format specification section
         _control_layout = ui.Layout(flex="1 1", max_width="100%")
         self.model_name_ddown = ui.Dropdown(value="", options=[""], layout=_control_layout)
@@ -902,7 +834,7 @@ class View:
             layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
         )
 
-    def _build_integrity_checking_page(self) -> ui.Box:
+    def _build_integrity_checking_page(self):
         """Build the integrity checking page"""
         # Create the control widgets
         # - create row download buttons
@@ -1135,7 +1067,7 @@ class View:
             layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
         )
 
-    def _build_plausibility_checking_page(self) -> ui.Box:
+    def _build_plausibility_checking_page(self):
         # Create control widgets
         # - create control widgets for visualization tab bar
         value_tab_btn = ui.Button()
@@ -1241,20 +1173,7 @@ class View:
             layout=ui.Layout(align_self="flex-end", justify_self="flex-end"),
         )
         submit.on_click(self.ctrl.onclick_submit)
-        # download = ui.HTML(
-        #     f"""
-        #         <a
-        #             href="{str(self.model.outputfile_path)}"
-        #             download="{str(self.model.outputfile_path.name)}"
-        #             class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-info"
-        #             style="line-height:36px;"
-        #             title=""
-        #         >
-        #             Download
-        #             <i class="fa fa-download" style="margin-left: 4px;"></i>
-        #         </a>
-        #     """
-        # )
+
         # Create page
         return ui.VBox(  # vbox for page
             children=(
@@ -1297,15 +1216,17 @@ class View:
             layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
         )
 
-    def _build_admin_page(self) -> ui.Box:
-        """Return an admin page"""
+    def _build_admin_page(self):
         table_rows = ""
+
         for row in self.model.get_submitted_files_info():
             table_rows += "<tr>"
+
             for colidx in range(len(row)):
                 field = row[colidx]
                 table_rows += f"<td>{field}</td>"
             table_rows += "</tr>"
+
         self.submissions_tbl = ui.HTML(
             value=f"""
             <table class="table">

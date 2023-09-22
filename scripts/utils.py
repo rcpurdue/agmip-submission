@@ -1,16 +1,9 @@
-"""
-Contains namespaces for various constants or utility methods
-They are placed here for modularity reasons or to prevent circular imports between modules
-@date Jun 30, 2021
-"""
 import os
 import ipywidgets as ui
 from enum import Enum
-from typing import List
 
 class VisualizationTab(Enum):
     """Enum for visualization tab's content"""
-
     VALUE_TRENDS = 0
     GROWTH_TRENDS = 1
 
@@ -24,7 +17,6 @@ class ApplicationMode:
 class UserPage:
     # TODO: Change this to enum
     """Namespace for the pages in this app"""
-
     FILE_UPLOAD = 1
     DATA_SPECIFICATION = 2
     INTEGRITY_CHECKING = 3
@@ -33,10 +25,7 @@ class UserPage:
 
 class Delimiter:
     """ Namespace for supported CSV delimiters and relevant utilities """
-
     # TODO: ipywidgets dropdown supports dual representations for selection values, so this class is not needed
-    # @date Jul 27 2021
-
     _model_postfix = "_MODEL"
     _view_postfix = "_VIEW"
     COMMA_MODEL = ","
@@ -51,43 +40,49 @@ class Delimiter:
     PIPE_VIEW = "Pipe  ( | )"
 
     @classmethod
-    def get_view(cls, delimiter_model: str) -> str:
+    def get_view(cls, delimiter_model):
         """Given a delimiter model, return a delimiter view"""
+
         if delimiter_model == "":  # Edge case
             return ""
+
         delimiter_model_names = [name for name in cls.__dict__.keys() if cls._model_postfix in name]
         delimiter_models = [getattr(cls, name) for name in delimiter_model_names]
-        assert delimiter_model in delimiter_models
+
         for i in range(len(delimiter_models)):
             if delimiter_model == delimiter_models[i]:
                 delimiter_model_name = delimiter_model_names[i]
                 delimiter_view_name = delimiter_model_name.replace(cls._model_postfix, cls._view_postfix)
                 return getattr(cls, delimiter_view_name)
+
         raise Exception("Cannot get delimiter view")
 
     @classmethod
-    def get_model(cls, delimiter_view: str) -> str:
+    def get_model(cls, delimiter_view):
         """Given a delimiter view, return a delimiter model"""
+
         if delimiter_view == "":  # Edge case
             return ""
+
         delimiter_view_names = [name for name in cls.__dict__.keys() if cls._view_postfix in name]
         delimiter_views = [getattr(cls, name) for name in delimiter_view_names]
-        assert delimiter_view in delimiter_views
+
         for i in range(len(delimiter_views)):
             if delimiter_view == delimiter_views[i]:
                 delimiter_view_name = delimiter_view_names[i]
                 delimiter_model_name = delimiter_view_name.replace(cls._view_postfix, cls._model_postfix)
                 return getattr(cls, delimiter_model_name)
+
         raise Exception("Cannot get delimiter model")
 
     @classmethod
-    def get_views(cls) -> List[str]:
+    def get_views(cls):
         """Return all delimiter views"""
         delimiter_view_names = [name for name in cls.__dict__.keys() if cls._view_postfix in name]
         return [getattr(cls, name) for name in delimiter_view_names]
 
     @classmethod
-    def get_models(cls) -> List[str]:
+    def get_models(cls):
         """Return all delimiter models"""
         delimiter_model_names = [name for name in cls.__dict__.keys() if cls._model_postfix in name]
         return [getattr(cls, name) for name in delimiter_model_names]
@@ -95,7 +90,6 @@ class Delimiter:
 
 class CSS:
     """Namespace for CSS classes declared in style.html and used inside Python"""
-
     APP = "rc-app-container"
     ASSOCIATED_PROJECT_SELECT = "rc-associated-project-select"
     BAD_LABELS_TABLE = "rc-bad-labels-table"
@@ -137,18 +131,16 @@ class CSS:
     VISUALIZATION_TAB__ELEMENT__ACTIVE = "rc-visualization-tab__element--active"
 
     @classmethod
-    def assign_class(cls, widget: ui.DOMWidget, class_name: str) -> ui.DOMWidget:
+    def assign_class(cls, widget, class_name):
         """Assign a CSS class to a widget and returns the widget back"""
         # Get attribute names by filtering out method names from __dict__.keys()
         attribute_names = [name for name in cls.__dict__.keys() if name[:1] != "__"]
         defined_css_classes = [getattr(cls, name) for name in attribute_names]
-        assert class_name in defined_css_classes
-        assert isinstance(widget, ui.DOMWidget)
         widget.add_class(class_name)
         return widget
 
     @classmethod
-    def get_cursor_mod_classes(cls) -> List[str]:
+    def get_cursor_mod_classes(cls):
         name_prefix = "CURSOR_MOD__"
         names = [name for name in cls.__dict__.keys() if name_prefix in name]
         return [getattr(cls, name) for name in names]
@@ -209,15 +201,15 @@ class JSAppModel:
 
     def __init__(self):
         # Auth token of notebook server
-        self.nbserver_auth_token: str = self._get_notebook_auth_token()
+        self.nbserver_auth_token = self._get_notebook_auth_token()
         # Model ID of the filename label in "UA" (upload area)
-        self.ua_file_label_model_id: str = ""
+        self.ua_file_label_model_id = ""
 
-    def serialize(self) -> str:
+    def serialize(self):
         """Serialize self into a format that can be embedded into the Javascript context"""
         return str(vars(self))
 
-    def _get_notebook_auth_token(self) -> str:
+    def _get_notebook_auth_token(self):
         """Get auth token to interact with notebook server's API"""
         # Terminal command to print the urls of running servers.
 
@@ -225,7 +217,6 @@ class JSAppModel:
         stream = os.popen("jupyter notebook list")
 
         output = stream.read()
-        assert "http" in output
         # Assume our server is at the top of the output and extract its token
         # format of output -> "<title>\nhttp://<nbserver_baseurl>/?token=TOKEN :: ...\n"
         output = output.split("token=")[1]

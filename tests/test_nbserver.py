@@ -2,7 +2,6 @@ import base64
 import json
 import os
 from typing import Optional
-import urllib
 import pytest
 from pathlib import Path
 import requests

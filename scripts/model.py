@@ -1,27 +1,21 @@
-from __future__ import annotations  # Delay the evaluation of undefined types
 import os
 import shutil
 from pathlib import Path
-from typing import Callable, Optional, Union, List
-
 import numpy as np
-from pandas.core.groupby.generic import DataFrameGroupBy
-
 from .utils import *
 from .domain import *
 
-
-def check_administrator_privilege() -> bool:
+def check_administrator_privilege():
     """Return whether or not user can enter the admin mode"""
     username = os.popen("id -un").read().strip("\n")
     return username in ["raziq", "raziqraif", "lanzhao", "rcampbel"]
 
-
-def get_user_globalecon_project_dirnames() -> list[str]:
+def get_user_globalecon_project_dirnames():
     "Return the list of AgMIP projects that the current user is in"
     groups = os.popen("groups").read().strip("\n").split(" ")
     project_groups = [group for group in groups if "pr-agmipglobalecon" in group]
     project_dirnames = [p_group[len("pr-") :] for p_group in project_groups]
+
     if len(project_dirnames) == 0:
         # NOTE: This is just to make developing on local environment easier
         project_dirnames = ["agmipglobaleconagclim50iv"]
@@ -36,13 +30,7 @@ class Model:
     DATA_PROJ_SUBD = Path('files/')
 
     def __init__(self):
-        # Import MVC classes here to prevent circular import problem
-        from .controller import Controller
-        from .view import View
 
-        # MVC attributes
-        self.view: View
-        self.controller: Controller
         # Base app states
         self.javascript_model = JSAppModel()  # - object to facilitate information injection into the Javascript context
         self.application_mode = ApplicationMode.USER
@@ -60,7 +48,7 @@ class Model:
             (dirname[len("agmipglobalecon"):], dirname) for dirname in get_user_globalecon_project_dirnames()
         ]  # - GlobalEcon projects the user is a part of
         self.uploadedfile_name = ""
-        self.associated_project_dirnames: list[str] = []  # - associated GlobalEcon projects for this submission
+        self.associated_project_dirnames = []  # - associated GlobalEcon projects for this submission
         # Data specification page's states
         # The states for this page have multiple dependencies, and changes to a state may trigger changes to
         # several other states. So, we only define 1 state as an instance attribute here, and will define the other
@@ -79,8 +67,8 @@ class Model:
         self.IGNOREDSCENARIOFILE_PATH = self.DOWNLOADDIR_PATH / "Records With An Ignored Scenario.csv"
         self.ACCEPTEDFILE_PATH = self.DOWNLOADDIR_PATH / "Accepted Records.csv"
         # - result of label/field checks
-        self.bad_labels_overview_tbl: list[list[str]] = []
-        self.unknown_labels_overview_tbl: list[list[Union[str, bool]]] = []
+        self.bad_labels_overview_tbl = []
+        self.unknown_labels_overview_tbl = []
         # - valid labels that can be used to fix an unknown field (based on its associated column)
         self.VALID_SCENARIOS = None
         self.VALID_REGIONS = None
@@ -92,19 +80,19 @@ class Model:
         self.overridden_labels = 0
         self.active_visualization_tab = VisualizationTab.VALUE_TRENDS
         # - uploaded labels
-        self.uploaded_scenarios: List[str] = []
-        self.uploaded_regions: List[str] = []
-        self.uploaded_items: List[str] = []
-        self.uploaded_variables: List[str] = []
-        self.uploaded_units: List[str] = []
-        self.uploaded_years: List[str] = []
+        self.uploaded_scenarios = []
+        self.uploaded_regions = []
+        self.uploaded_items = []
+        self.uploaded_variables = []
+        self.uploaded_units = []
+        self.uploaded_years = []
         # - states for value trends visualization
         self.valuetrends_scenario = ""
         self.valuetrends_region = ""
         self.valuetrends_variable = ""
         # TODO: Instead of exposing a grouped data frame to View, is it possible to create a plot in the domain layer
         # (under OutputDataEntity) and just display it in view? # Aug 5, 2021
-        self.valuetrends_table: DataFrameGroupBy | None = None
+        self.valuetrends_table = None
         self.valuetrends_table_year_colname = ""
         self.valuetrends_table_value_colname = ""
         # - states for growth trends visualization
@@ -113,56 +101,55 @@ class Model:
         self.growthtrends_variable = ""
         # TODO: Instead of exposing a grouped data frame to View, is it possible to create a plot in the domain layer
         # (under OutputDataEntity) and just display it in view? # Aug 5, 2021
-        self.growthtrends_table: DataFrameGroupBy | None = None
+        self.growthtrends_table = None
         self.growthtrends_table_year_colname = ""
         self.growthtrends_table_value_colname = ""
 
-    def intro(self, view: View, controller: Controller) -> None:  # type: ignore # noqa
+    def intro(self, view, controller):  
         """Introduce MVC modules to each other"""
         self.view = view
         self.controller = controller
 
     # Admin page methods
 
-    def get_submitted_files_info(self) -> list[list[str]]:
+    def get_submitted_files_info(self):
         """Return a list of submitted files' info"""
         dirnames = os.popen(f'ls {self.DATA_PROJ_ROOT}').read().split()
         project_dirnames = [dirname for dirname in dirnames if dirname[:len("agmipglobalecon")] == "agmipglobalecon"]
         files_info = []
+
         for project_dirname in project_dirnames:
             submissiondir_path = self.DATA_PROJ_ROOT / project_dirname / self.DATA_PROJ_SUBD / ".submissions"
             accepted_files = os.popen(f'ls {submissiondir_path} | grep .csv').read().split()
             pending_files = os.popen(f'ls {submissiondir_path / ".pending"} | grep [0-9].csv').read().split()
+
             for filename in accepted_files:
                 files_info.append([filename, project_dirname, "Accepted"])
+
             for filename in pending_files:
                 files_info.append([filename, project_dirname, "Pending"])
+
         return files_info
 
     # File upload page's methods
 
-    def remove_uploaded_file(self) -> None:
+    def remove_uploaded_file(self):
         """Remove uploaded file from the upload directory"""
-        assert len(self.uploadedfile_name) > 0
         file_path = self.UPLOADDIR_PATH / Path(self.uploadedfile_name)
-        assert file_path.is_file()
         file_path.unlink()
 
     # Data specification page's methods
 
-    def init_data_specification_page_states(self, file_name: str) -> Optional[str]:
-        """
-        Initialize the states in the data specification pages (only when it had just become active)
-        Note that the page may become active / inactive multiple times.
-        Return an error message if an error is encountered, else None
-        @date 6/23/21
-        """
-        assert len(file_name) > 0
+    def init_data_specification_page_states(self, file_name):
+        """Init states in data spec pages (only when it had just become active)."""
+        # Note that the page may become active / inactive multiple times.
+        
         # Re-initialize all states
         try:
             self.input_data_entity = InputDataEntity.create(self.UPLOADDIR_PATH / file_name)
         except Exception as e:
             return str(e)
+        
         valid_delimiters = Delimiter.get_models()
         # Guess information about the input file
         self.input_data_entity.guess_delimiter(valid_delimiters)
@@ -170,11 +157,7 @@ class Model:
         self.input_data_entity.guess_initial_lines_to_skip()
         self.input_data_entity.guess_model_name_n_column_assignments()
 
-    def validate_data_specification_input(self) -> Optional[str]:
-        """
-        Validate the input in the data specification page
-        Return a warning message if there's an invalid input, else None
-        """
+    def validate_data_specification_input(self):
         if len(self.input_data_entity.model_name) == 0:
             return "Model name is empty"
         elif len(self.input_data_entity.delimiter) == 0:
@@ -212,11 +195,12 @@ class Model:
             < 7
         ):
             return "Output data has duplicate columns"
+
         return None
 
     # Integrity checking page's methods
 
-    def init_integrity_checking_page_states(self) -> None:
+    def init_integrity_checking_page_states(self):
         # Diagnose input data
         self.input_data_diagnosis = InputDataDiagnosis.create(self.input_data_entity)
         # Map diagnosis results to page states
@@ -242,25 +226,17 @@ class Model:
         self.bad_labels_overview_tbl += [["-", "-", "-"] for _ in range(MIN_LABEL_OVERVIEW_TABLE_NROWS)]
         self.unknown_labels_overview_tbl += [["-", "-", "-", "", False] for _ in range(MIN_LABEL_OVERVIEW_TABLE_NROWS)]
 
-    def validate_unknown_labels_table(self, unknown_labels_table: list[list[str | bool]]) -> str | None:
-        """
-        Validate unknown labels table
-        Return an error message if there is any, or None
-        """
+    def validate_unknown_labels_table(self, unknown_labels_table):
+
         for row in unknown_labels_table:
             _, _, _, fix, override = row
-            assert isinstance(fix, str)
-            assert isinstance(override, bool)
+
             if override == True and fix.strip() != "":
                 return "Unknown labels cannot be both fixed and overridden"
 
     # Plausibility checking page's methods
 
-    def init_plausibility_checking_page_states(self, unknown_labels_table: list[list[str | bool]]) -> str | None:
-        """
-        Initialize plausibility checking states. Return a popup message or None
-        @date Jul 26 2021
-        """
+    def init_plausibility_checking_page_states(self, unknown_labels_table):
         popup_message = None
         # Pass unknown labels table back to input data diagnosis
         # NOTE: The table now contains the (fix or override) actions selected by the user
@@ -288,14 +264,17 @@ class Model:
                 popup_message = "After fixing some unknown variable or unit fields, the application found more records " \
                     "that contain out-of-bound values. The application has filtered out these records from the output data " \
                     "but it does not have a feature to report these records yet."
+
             # Map attributes from output data entity to page states
             self.outputfile_path = self.output_data_entity.file_path
             self.uploaded_scenarios = ["", *self.output_data_entity.unique_scenarios]
             self.uploaded_regions = ["", *self.output_data_entity.unique_regions]
             self.uploaded_variables = ["", *self.output_data_entity.unique_variables]
             self.uploaded_items = ["", *self.output_data_entity.unique_items]
+
             # Reset active tab
             self.active_visualization_tab = VisualizationTab.VALUE_TRENDS
+
             # Set default values if they exist
             if "SSP2_NoMt_NoCC" in self.uploaded_scenarios:
                 self.valuetrends_scenario = "SSP2_NoMt_NoCC"
@@ -313,42 +292,41 @@ class Model:
 
         return popup_message
 
-    def update_valuetrends_visualization_states(self) -> None:
-        """
-        Initialize states for value trends visualization
-        @date Aug 5, 2021
-        """
+    def update_valuetrends_visualization_states(self):
         self.valuetrends_table_value_colname = self.output_data_entity.VALUE_COLNAME
         self.valuetrends_table_year_colname = self.output_data_entity.YEAR_COLNAME
         self.valuetrends_table = self.output_data_entity.get_value_trends_table(
             self.valuetrends_scenario, self.valuetrends_region, self.valuetrends_variable
         )
 
-    def update_growthtrends_visualization_states(self) -> None:
-        """
-        Initialize states for value trends visualization
-        @date Aug 5, 2021
-        """
+    def update_growthtrends_visualization_states(self):
         self.growthtrends_table_value_colname = self.output_data_entity.VALUE_COLNAME
         self.growthtrends_table_year_colname = self.output_data_entity.YEAR_COLNAME
         self.growthtrends_table = self.output_data_entity.get_growth_trends_table(
             self.valuetrends_scenario, self.valuetrends_region, self.valuetrends_variable
         )
 
-    def submit_processed_file(self) -> None:
-        """Submit processed file to the correct directory"""
+    def submit_processed_file(self):
+        """Submit processed file to the correct directory."""
+
         for project_dirname in self.associated_project_dirnames:
             outputfile_dstpath = (
                 self.DATA_PROJ_ROOT / project_dirname / self.DATA_PROJ_SUBD / ".submissions" / ".pending" / self.outputfile_path.name
+
                 if self.overridden_labels > 0
                 else self.DATA_PROJ_ROOT / project_dirname / self.DATA_PROJ_SUBD / ".submissions" / self.outputfile_path.name
             )
+
             shutil.copy(self.outputfile_path, outputfile_dstpath)
+
             # Submit a file detailing override request or create a new data cube
             if self.overridden_labels > 0:
                 requestinfo_dstpath = outputfile_dstpath.parent / (outputfile_dstpath.stem + "_OverrideInfo.csv")
+
                 with open(str(requestinfo_dstpath), "w+") as infofile:
+
                     for label_info in self.input_data_diagnosis.unknown_labels:
+
                         if label_info.override == True:
                             line = f"{label_info.label},{label_info.associated_column},{label_info.closest_match}\n"
                             infofile.write(line)
@@ -364,33 +342,31 @@ class Model:
     # NOTE: Most property getters below can removed if we allow View to read from the domain layer directly. The same
     # holds true for most property setters below if we allow Controller to write to the domain layer directly. However,
     # exposing the domain entity to View and Controller could create unwanted dependencies.
-    # @date Aug 5, 2021
 
     # - properties for input format specification section
 
     @property
-    def model_name(self) -> str:
+    def model_name(self):
         return self.input_data_entity.model_name
 
     @model_name.setter
-    def model_name(self, value) -> None:
+    def model_name(self, value):
         self.input_data_entity.model_name = value
 
     @property
-    def header_is_included(self) -> bool:
+    def header_is_included(self):
         return self.input_data_entity.header_is_included
 
     @header_is_included.setter
-    def header_is_included(self, value: bool) -> None:
+    def header_is_included(self, value):
         self.input_data_entity.header_is_included = value
 
     @property
-    def delimiter(self) -> str:
+    def delimiter(self):
         return self.input_data_entity.delimiter
 
     @delimiter.setter
-    def delimiter(self, value: str) -> None:
-        assert value in Delimiter.get_models() or value == ""
+    def delimiter(self, value):
         self.input_data_entity.delimiter = value
         self.input_data_entity.guess_model_name_n_column_assignments()
 
@@ -399,17 +375,16 @@ class Model:
         return self.input_data_entity.initial_lines_to_skip
 
     @lines_to_skip.setter
-    def lines_to_skip(self, value: int) -> None:
-        assert value >= 0
+    def lines_to_skip(self, value: int):
         self.input_data_entity.initial_lines_to_skip = value
         self.input_data_entity.guess_model_name_n_column_assignments()
 
     @property
-    def scenarios_to_ignore_str(self) -> str:
+    def scenarios_to_ignore_str(self):
         return "".join(self.input_data_entity.scenarios_to_ignore)
 
     @scenarios_to_ignore_str.setter
-    def scenarios_to_ignore_str(self, value) -> None:
+    def scenarios_to_ignore_str(self, value):
         value = value.strip()
         scenarios = value.split(",") if value != "" else []
         scenarios = [scenario.strip() for scenario in scenarios]
@@ -418,76 +393,77 @@ class Model:
     # - properties for column assignment section
 
     @property
-    def column_assignment_options(self) -> list[str]:
+    def column_assignment_options(self):
         input_header = list(self.input_data_preview_content[0])  # The header / first row of the input data preview
         return [] if "" in input_header else input_header  # Assumption: Empty string is only present when the header
         # row is empty
 
     @property
-    def assigned_scenario_column(self) -> str:
+    def assigned_scenario_column(self):
         return ("", *self.column_assignment_options)[self.input_data_entity.scenario_colnum]
 
     @assigned_scenario_column.setter
-    def assigned_scenario_column(self, value: str):
+    def assigned_scenario_column(self, value):
         self.input_data_entity.scenario_colnum = ([""] + self.column_assignment_options).index(value)
 
     @property
-    def assigned_region_column(self) -> str:
+    def assigned_region_column(self):
         return ([""] + self.column_assignment_options)[self.input_data_entity.region_colnum]
 
     @assigned_region_column.setter
-    def assigned_region_column(self, value: str):
+    def assigned_region_column(self, value):
         self.input_data_entity.region_colnum = ([""] + self.column_assignment_options).index(value)
 
     @property
-    def assigned_variable_column(self) -> str:
+    def assigned_variable_column(self):
         return ([""] + self.column_assignment_options)[self.input_data_entity.variable_colnum]
 
     @assigned_variable_column.setter
-    def assigned_variable_column(self, value: str):
+    def assigned_variable_column(self, value):
         self.input_data_entity.variable_colnum = ([""] + self.column_assignment_options).index(value)
 
     @property
-    def assigned_item_column(self) -> str:
+    def assigned_item_column(self):
         return ([""] + self.column_assignment_options)[self.input_data_entity.item_colnum]
 
     @assigned_item_column.setter
-    def assigned_item_column(self, value: str):
+    def assigned_item_column(self, value):
         self.input_data_entity.item_colnum = ([""] + self.column_assignment_options).index(value)
 
     @property
-    def assigned_unit_column(self) -> str:
+    def assigned_unit_column(self):
         return ([""] + self.column_assignment_options)[self.input_data_entity.unit_colnum]
 
     @assigned_unit_column.setter
-    def assigned_unit_column(self, value: str) -> None:
+    def assigned_unit_column(self, value):
         self.input_data_entity.unit_colnum = ([""] + self.column_assignment_options).index(value)
 
     @property
-    def assigned_year_column(self) -> str:
+    def assigned_year_column(self):
         return ([""] + self.column_assignment_options)[self.input_data_entity.year_colnum]
 
     @assigned_year_column.setter
-    def assigned_year_column(self, value: str) -> None:
+    def assigned_year_column(self, value):
         self.input_data_entity.year_colnum = ([""] + self.column_assignment_options).index(value)
 
     @property
-    def assigned_value_column(self) -> str:
+    def assigned_value_column(self):
         return ([""] + self.column_assignment_options)[self.input_data_entity.value_colnum]
 
     @assigned_value_column.setter
-    def assigned_value_column(self, value: str) -> None:
+    def assigned_value_column(self, value):
         self.input_data_entity.value_colnum = ([""] + self.column_assignment_options).index(value)
 
     # - properties for data preview sections
 
     @property
-    def input_data_preview_content(self) -> np.ndarray:
+    def input_data_preview_content(self):
         """Return preview table content in an ndarray"""
         # Get constants
         NROWS = 3
         DEFAULT_CONTENT = np.array(["" for _ in range(3)]).reshape((NROWS, 1))
         preview_table = self.input_data_entity.sample_parsed_input_data[:NROWS]
+
         # Make sure we have enough number of rows
         if len(preview_table) == 0:
             return DEFAULT_CONTENT
@@ -495,6 +471,7 @@ class Model:
             ncolumns = len(preview_table[0])
             empty_row = ["" for _ in range(ncolumns)]
             preview_table = (preview_table + [empty_row, empty_row])[:NROWS]  # add empty rows and trim excess rows
+
         # Prepare header row
         if self.input_data_entity.header_is_included:
             # Prepend header cells with a), b), c), d) ...
@@ -507,19 +484,16 @@ class Model:
             ncolumns = len(preview_table[0])
             header = ["Column " + str(i + 1) for i in range(ncolumns)]
             preview_table = [header] + preview_table[: NROWS - 1]
+
         return np.array(preview_table)
 
     @property
-    def output_data_preview_content(self) -> np.ndarray:
-        """
-        Return preview table content in an ndarray
-        The content is built on top of the input data preview content
-        @date 6/23/21
-        """
+    def output_data_preview_content(self):
+        # Return preview table content in an ndarray
+        # The content is built on top of the input data preview content
         NROWS = 3
         # Lambda func. to return column content, given the title and column number assignment
-        assert self.input_data_preview_content.shape[0] >= NROWS
-        get_column_content: Callable[[str, int], list[str]] = (
+        get_column_content = (
             lambda title, assigned_colnum: [title] + ["" for _ in range(NROWS - 1)]
             if assigned_colnum == 0
             else [title] + [self.input_data_preview_content[row][assigned_colnum - 1] for row in range(1, NROWS)]
