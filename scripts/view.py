@@ -1,21 +1,15 @@
 from __future__ import annotations  # Delay the evaluation of undefined types
+
+import numpy as np
+import ipywidgets as ui
+
+from IPython.core.display import Javascript, clear_output, display, HTML
+from pandas.core.frame import DataFrame
 from matplotlib import pyplot as plt
 from threading import Timer
-from typing import Callable, Optional, Union, List, Tuple, Any
+from typing import Callable, Optional, List, Tuple
 
-import ipywidgets as ui
-import numpy as np
-from IPython.core.display import Javascript, clear_output, display
-from IPython.core.display import HTML
-from pandas.core.frame import DataFrame
-from pandas.core.groupby.generic import DataFrameGroupBy
-from traitlets.config.application import ApplicationError
-
-from .utils import ApplicationMode, CSS
-from .utils import Delimiter
-from .utils import JSAppModel
-from .utils import Notification
-from .utils import VisualizationTab
+from .utils import *
 
 
 PLOT_HEIGHT = 11

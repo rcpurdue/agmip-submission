@@ -4,10 +4,9 @@ They are placed here for modularity reasons or to prevent circular imports betwe
 @date Jun 30, 2021
 """
 import os
-from enum import Enum
 import ipywidgets as ui
+from enum import Enum
 from typing import List
-
 
 class VisualizationTab(Enum):
     """Enum for visualization tab's content"""

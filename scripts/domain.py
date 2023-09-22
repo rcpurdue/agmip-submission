@@ -1,20 +1,19 @@
 from __future__ import annotations  # Delay the evaluation of types
-from contextlib import redirect_stderr
-from copy import copy
-from copy import deepcopy
-import csv
-from datetime import datetime
-import difflib
-import io
-from io import TextIOWrapper
-import math
-import numpy as np
+
 import os
+import math
+import io
+import csv
+import difflib
+
+from pathlib import Path
+from typing import Callable, Optional, List, Dict, Set, Tuple
+from contextlib import redirect_stderr
+from datetime import datetime
+
+import numpy as np
 import pandas as pd
 from pandas import DataFrame
-from pathlib import Path
-from typing import Callable, Optional, List, Dict, Set, Union, Tuple
-
 from pandas.core.groupby.generic import DataFrameGroupBy
 
 
@@ -564,7 +563,7 @@ class InputDataDiagnosis:
 
     # Private util methods for row checks
 
-    def _diagnose_row(self, rownum: int, row: list[str], line: str, structissuefile: TextIOWrapper, ignoredscenfile: TextIOWrapper, duplicatesfile: TextIOWrapper) -> bool:
+    def _diagnose_row(self, rownum: int, row: list[str], line: str, structissuefile: io.TextIOWrapper, ignoredscenfile: io.TextIOWrapper, duplicatesfile: io.TextIOWrapper) -> bool:
         """
         Check the given row for various issues
         If a row fails a check, then it will be logged into the appropriate file
@@ -578,7 +577,7 @@ class InputDataDiagnosis:
             return True
         return False
 
-    def _check_row_for_structural_issue(self, rownum: int, row: list[str], structissuefile: TextIOWrapper) -> bool:
+    def _check_row_for_structural_issue(self, rownum: int, row: list[str], structissuefile: io.TextIOWrapper) -> bool:
         """
         Checks if a row has a structural issue and logs it into the file if it has.
         Returns the result of the structural check.
@@ -626,7 +625,7 @@ class InputDataDiagnosis:
         self.nrows_w_struct_issue -= 1  # Substract the value back if the row does not have a struc. issue
         return False
 
-    def _check_row_for_value_w_structural_issue(self, rownum: int, row: list[str], structissuefile: TextIOWrapper) -> bool:
+    def _check_row_for_value_w_structural_issue(self, rownum: int, row: list[str], structissuefile: io.TextIOWrapper) -> bool:
         """Check if row has a value field with a structural issue and log it if it does"""
         value_field = row[self._input_entity.value_colnum - 1]
         try:
@@ -657,7 +656,7 @@ class InputDataDiagnosis:
             return True
         return False
 
-    def _check_row_for_ignored_scenario(self, rownum: int, row: list[str], ignoredscenfile: TextIOWrapper) -> bool:
+    def _check_row_for_ignored_scenario(self, rownum: int, row: list[str], ignoredscenfile: io.TextIOWrapper) -> bool:
         """
         Check if a row contains an ignored scenario and logs it into the given file if it does.
         Returns the result of the check.
@@ -670,7 +669,7 @@ class InputDataDiagnosis:
             return True
         return False
 
-    def _check_if_duplicate_row(self, rownum: int, row: str, duplicatesfile: TextIOWrapper) -> bool:
+    def _check_if_duplicate_row(self, rownum: int, row: str, duplicatesfile: io.TextIOWrapper) -> bool:
         """
         Check if a row is a duplicate and log it into the duplicates file if it is.
         Return the result of the check.
@@ -787,7 +786,7 @@ class InputDataDiagnosis:
 
     # Private util methods to log found errors/issues
 
-    def _log_row_w_struct_issue(self, rownum: int, row: list[str], issue_description: str, structissuefile: TextIOWrapper) -> None:
+    def _log_row_w_struct_issue(self, rownum: int, row: list[str], issue_description: str, structissuefile: io.TextIOWrapper) -> None:
         """Return the log text for the given row with structural issue"""
         log_ncolumns = self._largest_ncolumns + 2
         log_row = [str(rownum), *row] + ["" for _ in range(log_ncolumns)]
