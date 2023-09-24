@@ -3,7 +3,7 @@ import ipywidgets as ui
 from enum import Enum
 
 class VisualizationTab(Enum):
-    """Enum for visualization tab's content"""
+    """Enum for visualization tab"""
     VALUE_TRENDS = 0
     GROWTH_TRENDS = 1
 
@@ -16,7 +16,7 @@ class ApplicationMode:
 
 class UserPage:
     # TODO: Change this to enum
-    """Namespace for the pages in this app"""
+    """Namespace for pages"""
     FILE_UPLOAD = 1
     DATA_SPECIFICATION = 2
     INTEGRITY_CHECKING = 3
@@ -24,8 +24,8 @@ class UserPage:
 
 
 class Delimiter:
-    """ Namespace for supported CSV delimiters and relevant utilities """
-    # TODO: ipywidgets dropdown supports dual representations for selection values, so this class is not needed
+    """ Namespace for supported CSV delimiters & relevant utilities """
+    # TODO ipywidgets dropdown supports dual representations for selection values, this class not needed
     _model_postfix = "_MODEL"
     _view_postfix = "_VIEW"
     COMMA_MODEL = ","
@@ -133,9 +133,9 @@ class CSS:
     @classmethod
     def assign_class(cls, widget, class_name):
         """Assign a CSS class to a widget and returns the widget back"""
-        # Get attribute names by filtering out method names from __dict__.keys()
+        # Get attrib names by filtering out method names from __dict__.keys()
         attribute_names = [name for name in cls.__dict__.keys() if name[:1] != "__"]
-        defined_css_classes = [getattr(cls, name) for name in attribute_names]
+        _ = [getattr(cls, name) for name in attribute_names]
         widget.add_class(class_name)
         return widget
 
@@ -202,7 +202,7 @@ class JSAppModel:
     def __init__(self):
         # Auth token of notebook server
         self.nbserver_auth_token = self._get_notebook_auth_token()
-        # Model ID of the filename label in "UA" (upload area)
+        # Model ID of filename label in "UA" (upload area)
         self.ua_file_label_model_id = ""
 
     def serialize(self):
@@ -211,13 +211,11 @@ class JSAppModel:
 
     def _get_notebook_auth_token(self):
         """Get auth token to interact with notebook server's API"""
-        # Terminal command to print the urls of running servers.
-
-        # NOTE: TO_DEBUG: Specify "jupyter lab..." to debug, else "jupyter notebook..."
+        # Terminal command to print urls of running servers
+        # NOTE To debug specify "jupyter lab...", else "jupyter notebook..."
         stream = os.popen("jupyter notebook list")
-
         output = stream.read()
-        # Assume our server is at the top of the output and extract its token
+        # Assume server at top of output, extract its token
         # format of output -> "<title>\nhttp://<nbserver_baseurl>/?token=TOKEN :: ...\n"
         output = output.split("token=")[1]
         # Format of output is "TOKEN :: ..."

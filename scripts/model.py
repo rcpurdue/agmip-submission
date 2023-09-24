@@ -32,7 +32,7 @@ class Model:
     def __init__(self):
 
         # Base app states
-        self.javascript_model = JSAppModel()  # - object to facilitate information injection into the Javascript context
+        self.javascript_model = JSAppModel()  # - Do info injection into JS context
         self.application_mode = ApplicationMode.USER
         self.is_user_an_admin = check_administrator_privilege()
         self.current_user_page = UserPage.FILE_UPLOAD  # - current user mode page
@@ -40,45 +40,53 @@ class Model:
         self.input_data_entity = InputDataEntity()  # - domain entity for input / uploaded data file
         self.input_data_diagnosis: InputDataDiagnosis = InputDataDiagnosis()  # - domain entity for input data diagnosis
         self.output_data_entity: OutputDataEntity = OutputDataEntity()  # - domain entity for output / processed data
+        
         # File upload page's states
         self.INFOFILE_PATH = (  # - path of downloadeable info file
             self.WORKINGDIR_PATH / "AgMIP GlobalEcon Data Submission Info.zip"
         )
         self.USER_GLOBALECON_PROJECTS = [
             (dirname[len("agmipglobalecon"):], dirname) for dirname in get_user_globalecon_project_dirnames()
-        ]  # - GlobalEcon projects the user is a part of
+        ]  # - GlobalEcon projects user is part of
         self.uploadedfile_name = ""
         self.associated_project_dirnames = []  # - associated GlobalEcon projects for this submission
-        # Data specification page's states
-        # The states for this page have multiple dependencies, and changes to a state may trigger changes to
-        # several other states. So, we only define 1 state as an instance attribute here, and will define the other
-        # states as properties later. We also define the states as properties because changes made to them needs to be relayed to
-        # to the domain model @ Aug 4, 2021
+
+        # Data spec page states
+        # States for page have multiple dependencies, changes to state may trigger changes to other states 
+        # Only define 1 state as instance attrib here, define other states as properties later
+        # Define states as props b/c changes made need to be relayed to domain model
+        
         self.VALID_MODEL_NAMES = None  # - valid model names
+        
         # Integrity checking page's states
         # - result of row checks
-        self.nrows_w_struct_issue = 0  # - number of rows with structural issues
-        self.nrows_w_ignored_scenario = 0  # - number of rows with ignored scenario
-        self.nrows_duplicates = 0  # - number of duplicate rows
-        self.nrows_accepted = 0  # - number of rows that passed row checks
+        self.nrows_w_struct_issue = 0  # - num rows w/structural issues
+        self.nrows_w_ignored_scenario = 0  # - num rows w/ignored scenario
+        self.nrows_duplicates = 0  # - num duplicate rows
+        self.nrows_accepted = 0  # - num rows that passed row checks
+        
         # - paths to downloadable row files
         self.STRUCTISSUEFILE_PATH = self.DOWNLOADDIR_PATH / "Rows With Structural Issue.csv"
         self.DUPLICATESFILE_PATH = self.DOWNLOADDIR_PATH / "Duplicate Records.csv"
         self.IGNOREDSCENARIOFILE_PATH = self.DOWNLOADDIR_PATH / "Records With An Ignored Scenario.csv"
         self.ACCEPTEDFILE_PATH = self.DOWNLOADDIR_PATH / "Accepted Records.csv"
+        
         # - result of label/field checks
         self.bad_labels_overview_tbl = []
         self.unknown_labels_overview_tbl = []
-        # - valid labels that can be used to fix an unknown field (based on its associated column)
+        
+        # - valid labels to fix unknown field (based on associated col)
         self.VALID_SCENARIOS = None
         self.VALID_REGIONS = None
         self.VALID_VARIABLES = None
         self.VALID_ITEMS = None
         self.VALID_UNITS = None
+        
         # Plausibility checking page's states
-        self.outputfile_path = Path()  # - path to cleaned and processed file
+        self.outputfile_path = Path()  # - path to cleaned & processed file
         self.overridden_labels = 0
         self.active_visualization_tab = VisualizationTab.VALUE_TRENDS
+        
         # - uploaded labels
         self.uploaded_scenarios = []
         self.uploaded_regions = []
@@ -86,34 +94,34 @@ class Model:
         self.uploaded_variables = []
         self.uploaded_units = []
         self.uploaded_years = []
+
+        # TODO Instead of exposing grouped data frame to View, create plot in domain layer under OutputDataEntity, display in view
+
         # - states for value trends visualization
         self.valuetrends_scenario = ""
         self.valuetrends_region = ""
         self.valuetrends_variable = ""
-        # TODO: Instead of exposing a grouped data frame to View, is it possible to create a plot in the domain layer
-        # (under OutputDataEntity) and just display it in view? # Aug 5, 2021
         self.valuetrends_table = None
         self.valuetrends_table_year_colname = ""
         self.valuetrends_table_value_colname = ""
+
         # - states for growth trends visualization
         self.growthtrends_scenario = ""
         self.growthtrends_region = ""
         self.growthtrends_variable = ""
-        # TODO: Instead of exposing a grouped data frame to View, is it possible to create a plot in the domain layer
-        # (under OutputDataEntity) and just display it in view? # Aug 5, 2021
         self.growthtrends_table = None
         self.growthtrends_table_year_colname = ""
         self.growthtrends_table_value_colname = ""
 
     def intro(self, view, controller):  
-        """Introduce MVC modules to each other"""
+        """Introduce MVC modules to each other."""
         self.view = view
         self.controller = controller
 
     # Admin page methods
 
     def get_submitted_files_info(self):
-        """Return a list of submitted files' info"""
+        """Return list of submitted files info."""
         dirnames = os.popen(f'ls {self.DATA_PROJ_ROOT}').read().split()
         project_dirnames = [dirname for dirname in dirnames if dirname[:len("agmipglobalecon")] == "agmipglobalecon"]
         files_info = []
@@ -131,18 +139,18 @@ class Model:
 
         return files_info
 
-    # File upload page's methods
+    # File upload page methods
 
     def remove_uploaded_file(self):
-        """Remove uploaded file from the upload directory"""
+        """Remove uploaded file from upload directory."""
         file_path = self.UPLOADDIR_PATH / Path(self.uploadedfile_name)
         file_path.unlink()
 
-    # Data specification page's methods
+    # Data spec page methods
 
     def init_data_specification_page_states(self, file_name):
-        """Init states in data spec pages (only when it had just become active)."""
-        # Note that the page may become active / inactive multiple times.
+        """Init states in data spec pages (only after just become active)."""
+        # Note page may become active / inactive mult times
         
         # Re-initialize all states
         try:
@@ -151,7 +159,8 @@ class Model:
             return str(e)
         
         valid_delimiters = Delimiter.get_models()
-        # Guess information about the input file
+
+        # Guess info about input file
         self.input_data_entity.guess_delimiter(valid_delimiters)
         self.input_data_entity.guess_header_is_included()
         self.input_data_entity.guess_initial_lines_to_skip()
@@ -178,7 +187,7 @@ class Model:
             return "Year column is empty"
         elif len(self.assigned_value_column) == 0:
             return "Value column is empty"
-        elif (  # Make sure there are no duplicate assignment, we should have a set of 7 columns
+        elif (  # Ensure no duplicate assignment, should have set of 7 cols
             len(
                 set(
                     [
@@ -198,11 +207,12 @@ class Model:
 
         return None
 
-    # Integrity checking page's methods
+    # Integrity checking page methods
 
     def init_integrity_checking_page_states(self):
         # Diagnose input data
         self.input_data_diagnosis = InputDataDiagnosis.create(self.input_data_entity)
+        
         # Map diagnosis results to page states
         self.nrows_w_struct_issue = self.input_data_diagnosis.nrows_w_struct_issue
         self.nrows_w_ignored_scenario = self.input_data_diagnosis.nrows_w_ignored_scenario
@@ -234,13 +244,13 @@ class Model:
             if override == True and fix.strip() != "":
                 return "Unknown labels cannot be both fixed and overridden"
 
-    # Plausibility checking page's methods
+    # Plausibility checking page methods
 
     def init_plausibility_checking_page_states(self, unknown_labels_table):
         popup_message = None
         # Pass unknown labels table back to input data diagnosis
-        # NOTE: The table now contains the (fix or override) actions selected by the user
-        # NOTE: Make sure to ignore dummy rows
+        # NOTE Table contains fix or override actions selected by user
+        # NOTE Must ignore dummy rows
         self.input_data_diagnosis.unknown_labels = [
             UnknownLabelInfo(
                 label=str(row[0]),
@@ -254,7 +264,7 @@ class Model:
         self.overridden_labels = len(
             [label_info for label_info in self.input_data_diagnosis.unknown_labels if label_info.override == True]
         )
-        # Create output data based on information from input data and input data diagnosis
+        # Create output data based on info from input data & diagnosis
         self.output_data_entity = OutputDataEntity.create(self.input_data_entity, self.input_data_diagnosis)
 
         if self.output_data_entity:
@@ -265,7 +275,7 @@ class Model:
                     "that contain out-of-bound values. The application has filtered out these records from the output data " \
                     "but it does not have a feature to report these records yet."
 
-            # Map attributes from output data entity to page states
+            # Map attribs from output data entity to page states
             self.outputfile_path = self.output_data_entity.file_path
             self.uploaded_scenarios = ["", *self.output_data_entity.unique_scenarios]
             self.uploaded_regions = ["", *self.output_data_entity.unique_regions]
@@ -275,16 +285,20 @@ class Model:
             # Reset active tab
             self.active_visualization_tab = VisualizationTab.VALUE_TRENDS
 
-            # Set default values if they exist
+            # Set default values if exist
+            
             if "SSP2_NoMt_NoCC" in self.uploaded_scenarios:
                 self.valuetrends_scenario = "SSP2_NoMt_NoCC"
                 self.growthtrends_scenario = "SSP2_NoMt_NoCC"
+            
             if "WLD" in self.uploaded_regions:
                 self.valuetrends_region = "WLD"
                 self.growthtrends_region = "WLD"
+            
             if "PROD" in self.uploaded_variables:
                 self.valuetrends_variable = "PROD"
                 self.growthtrends_variable = "PROD"
+            
             self.valuetrends_table = None
             self.growthtrends_table = None
         else:
@@ -307,7 +321,7 @@ class Model:
         )
 
     def submit_processed_file(self):
-        """Submit processed file to the correct directory."""
+        """Submit processed file to correct dir."""
 
         for project_dirname in self.associated_project_dirnames:
             outputfile_dstpath = (
@@ -319,7 +333,7 @@ class Model:
 
             shutil.copy(self.outputfile_path, outputfile_dstpath)
 
-            # Submit a file detailing override request or create a new data cube
+            # Submitfile detailing override request or create new data cube
             if self.overridden_labels > 0:
                 requestinfo_dstpath = outputfile_dstpath.parent / (outputfile_dstpath.stem + "_OverrideInfo.csv")
 
@@ -333,17 +347,17 @@ class Model:
             else:
                 submissiondir_path = outputfile_dstpath.parent
                 submission_files_wildcard = str(submissiondir_path / "*.csv")
-                # Print the content of all csv files, remove duplicates, and redirect the output to merged.csv
-                # TODO: Ignore the content of existing merged.csv when printing
+                # Print content of all csv files, remove duplicates, redirect output to merged.csv
+                # TODO Ignore content of existing merged.csv when printing
                 os.system(f"cat {submission_files_wildcard} | uniq > merged.csv")
 
-    # Data specification page's properties
-    # NOTE: See the comment in constructor for the reasoning behind these properties.
-    # NOTE: Most property getters below can removed if we allow View to read from the domain layer directly. The same
-    # holds true for most property setters below if we allow Controller to write to the domain layer directly. However,
-    # exposing the domain entity to View and Controller could create unwanted dependencies.
+    # Data spec page properties
+    # NOTE See comment in constructor for reason for these props
+    # NOTE Most getters can removed if allow View to read from domain layer directly
+    #      Same for most setters if we allow Controller to write to domain layer directly 
+    #      But exposing domain entity to View and Controller could create unwanted dependencies
 
-    # - properties for input format specification section
+    # - props for input format spec section
 
     @property
     def model_name(self):
@@ -390,13 +404,12 @@ class Model:
         scenarios = [scenario.strip() for scenario in scenarios]
         self.input_data_entity.scenarios_to_ignore = scenarios
 
-    # - properties for column assignment section
+    # - props for col assign section
 
     @property
     def column_assignment_options(self):
-        input_header = list(self.input_data_preview_content[0])  # The header / first row of the input data preview
-        return [] if "" in input_header else input_header  # Assumption: Empty string is only present when the header
-        # row is empty
+        input_header = list(self.input_data_preview_content[0])  # Header / 1st row of input data preview
+        return [] if "" in input_header else input_header  # NOTE Assumes empty str is only when header row empty
 
     @property
     def assigned_scenario_column(self):
@@ -464,13 +477,13 @@ class Model:
         DEFAULT_CONTENT = np.array(["" for _ in range(3)]).reshape((NROWS, 1))
         preview_table = self.input_data_entity.sample_parsed_input_data[:NROWS]
 
-        # Make sure we have enough number of rows
+        # Ensure enough num rows
         if len(preview_table) == 0:
             return DEFAULT_CONTENT
         elif len(preview_table) < 3:
             ncolumns = len(preview_table[0])
             empty_row = ["" for _ in range(ncolumns)]
-            preview_table = (preview_table + [empty_row, empty_row])[:NROWS]  # add empty rows and trim excess rows
+            preview_table = (preview_table + [empty_row, empty_row])[:NROWS]  # add empty rows, trim excess rows
 
         # Prepare header row
         if self.input_data_entity.header_is_included:
@@ -489,16 +502,17 @@ class Model:
 
     @property
     def output_data_preview_content(self):
-        # Return preview table content in an ndarray
-        # The content is built on top of the input data preview content
+        # Return preview table content in ndarray
+        # Content built on top of input data preview content
         NROWS = 3
-        # Lambda func. to return column content, given the title and column number assignment
+        # Lambda to return col content, given title & col num assignment
         get_column_content = (
             lambda title, assigned_colnum: [title] + ["" for _ in range(NROWS - 1)]
             if assigned_colnum == 0
             else [title] + [self.input_data_preview_content[row][assigned_colnum - 1] for row in range(1, NROWS)]
         )
-        # Get the content of all columns
+
+        # Get content of all cols
         model_col = ["Model", self.input_data_entity.model_name, self.input_data_entity.model_name]
         scenario_col = get_column_content("Scenario", self.input_data_entity.scenario_colnum)
         region_col = get_column_content("Region", self.input_data_entity.region_colnum)
@@ -507,6 +521,7 @@ class Model:
         unit_col = get_column_content("Unit", self.input_data_entity.unit_colnum)
         year_col = get_column_content("Year", self.input_data_entity.year_colnum)
         value_col = get_column_content("Value", self.input_data_entity.value_colnum)
+        
         return np.array(
             [model_col, scenario_col, region_col, variable_col, item_col, unit_col, year_col, value_col]
         ).transpose()

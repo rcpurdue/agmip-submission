@@ -20,7 +20,7 @@ def set_dropdown_options(widget: ui.Dropdown, options, onchange_callback):
 
 
 class View:
-    # Ensure page update will not recursively trigger another page update
+    # Ensure page update won't recursively trigger another page update
     DATA_SPEC_PAGE_IS_BEING_UPDATED = (False)
 
     def __init__(self):
@@ -37,18 +37,18 @@ class View:
         self._unknown_labels_tbl_cell_pool = []
 
     def intro(self, model, ctrl):  # type: ignore # noqa
-        """Introduce MVC modules to each other"""
+        """Introduce MVC modules to each other."""
         self.model = model
         self.ctrl = ctrl
 
     def display(self):
-        """Build and show notebook user interface"""
+        """Build & show notebook UI"""
         self.app_container = self._build_app()
-        # Display the appropriate html files and our ipywidgets app
+        # Display appropriate html files & ipywidgets app
         display(HTML(filename="style.html"))
         display(self.app_container)
         # Embed Javascript app model in Javascript context
-        # TODO: Move the serialization data / functionality to Model and remove JSAppModel class (to reduce the amount of abstractions)
+        # TODO: Move serialization data / functionality to Model, remove JSAppModel class to reduce amt of abstractions
         javascript_model: JSAppModel = self.model.javascript_model
         display(HTML(f"<script> APP_MODEL = {javascript_model.serialize()}</script>"))
         display(HTML(filename="script.html"))
@@ -64,15 +64,15 @@ class View:
             self.app_container.add_class(new_cursor_mod_class)
 
     def show_notification(self, variant, content):
-        """Display a notification to the user."""
-        # Cancel existing timer if it's still running
+        """Display notification to user."""
+        # Cancel existing timer if still running
         self._notification_timer.cancel()
-        # Reset the notification's DOM classes
-        # This is important because we implement a clickaway listener in JS which removes a DOM class from the
-        # notification's view without notifying the notification's model. So, we want to make sure that the DOM classes
-        # maintained in both view and model are synchronized. (The view and model in this context refers to ipywidgets'
-        # view and model)
+        
+        # Reset notification's DOM classes
+        # Clickaway listener in JS which removes DOM class from notification's view w/o tellling notification's model. 
+        # Ensure DOM classes maintained in both view & model are synchronized ("view & model" refers to ipywidgets' view & model)
         self.notification._dom_classes = (CSS.NOTIFICATION,)
+
         # Update notification content
         notification_text = self.notification.children[1]
         notification_text.value = content
@@ -97,7 +97,7 @@ class View:
         else:
             print("Variant does not exists")
         
-        # Create a timer to hide notification after X seconds
+        # Create timer to hide notification after X seconds
         self._notification_timer = Timer(3.5, self.notification.remove_class, args=[CSS.NOTIFICATION__SHOW])
         self._notification_timer.start()
 
@@ -127,18 +127,18 @@ class View:
         NUM_OF_PAGES = len(self.user_page_container.children)
         current_page_index = self.model.current_user_page - 1
 
-        # Update visibility of pages and style of page stepper elements
+        # Update visibility of pages & style of page stepper elements
         for page_index in range(0, NUM_OF_PAGES):
             # Get page and stepper element
             page = self.user_page_container.children[page_index]
             stepper_element = self.user_page_stepper.children[page_index]
 
             if page_index == current_page_index:
-                # Show the page and style the stepper element apropriately
+                # Show page & style stepper element apropriately
                 page.remove_class(CSS.DISPLAY_MOD__NONE)
                 stepper_element._dom_classes = (CSS.STEPPER_EL, CSS.STEPPER_EL__CURRENT)
             else:
-                # Hide the page and style the stepper element appropriately
+                # Hide page & style stepper element appropriately
                 page.add_class(CSS.DISPLAY_MOD__NONE)
                 stepper_element._dom_classes = (
                     (CSS.STEPPER_EL, CSS.STEPPER_EL__ACTIVE)
@@ -189,7 +189,7 @@ class View:
             self.app_body.children = [self.user_page_stepper, self.user_page_container, self.admin_page]
 
     def update_file_upload_page(self):
-        # Update the file name snackbar
+        # Update file name snackbar
         children_ = self.uploaded_file_name_box.children
         no_file_uploaded_widget = children_[0]
         file_uploaded_widget = children_[1]
@@ -202,15 +202,16 @@ class View:
             label_widget = children[0]
             label_widget.value = self.model.uploadedfile_name
         else:
-            # Show the name of the uploaded file
+            # Show name of uploaded file
             file_uploaded_widget.add_class(CSS.DISPLAY_MOD__NONE)
             no_file_uploaded_widget.remove_class(CSS.DISPLAY_MOD__NONE)
 
-        # Reset the hidden filename value
+        # Reset hidden filename value
         self.ua_file_label.value = ""
 
     def update_data_specification_page(self):
         self.DATA_SPEC_PAGE_IS_BEING_UPDATED = True
+        
         # Update input format specification widgets
         set_dropdown_options(
             self.model_name_ddown, ("", *self.model.VALID_MODEL_NAMES), self.ctrl.onchange_model_name_dropdown
@@ -221,6 +222,7 @@ class View:
         self.header_is_included_chkbox.value = self.model.header_is_included
         self.lines_to_skip_txt.value = str(self.model.lines_to_skip)
         self.scenarios_to_ignore_txt.value = self.model.scenarios_to_ignore_str
+        
         # Update column assignment widgets
         column_options = ("", *self.model.column_assignment_options)
         self.model_name_lbl.value = self.model.model_name if len(self.model.model_name) > 0 else "<Model Name>"
@@ -238,8 +240,9 @@ class View:
         self.year_column_ddown.value = self.model.assigned_year_column
         set_dropdown_options(self.value_column_ddown, column_options, self.ctrl.onchange_value_column_dropdown)
         self.value_column_ddown.value = self.model.assigned_value_column
-        # Upload the input data preview table
-        # TODO: implement this table with an ipywidgets HTML
+        
+        # Upload input data preview table
+        # TODO: implement this table with ipywidgets HTML
         table_content = self.model.input_data_preview_content
         number_of_columns = table_content.shape[1]
         table_content = table_content.flatten()
@@ -259,8 +262,9 @@ class View:
 
         self.input_data_preview_tbl.children = self._input_data_table_childrenpool[: table_content.size]
         self.input_data_preview_tbl.layout.grid_template_columns = f"repeat({number_of_columns}, 1fr)"
-        # Update the output the data preview table
-        # TODO: implement this table with an ipywidgets HTML instead of GridBox
+        
+        # Update output data preview table
+        # TODO: implement table with ipywidgets HTML instead of GridBox
         table_content = self.model.output_data_preview_content
         table_content = table_content.flatten()
         content_index = 0
@@ -270,16 +274,17 @@ class View:
             content_label = content_box.children[0]
             content_label.value = table_content[content_index]
             content_index += 1
+
         self.DATA_SPEC_PAGE_IS_BEING_UPDATED = False
 
     def update_integrity_checking_page(self):
-        # Update the row summary labels
+        # Update row summary labels
         self.rows_w_struct_issues_lbl.value = "{:,}".format(self.model.nrows_w_struct_issue)
         self.rows_w_ignored_scenario_lbl.value = "{:,}".format(self.model.nrows_w_ignored_scenario)
         self.duplicate_rows_lbl.value = "{:,}".format(self.model.nrows_duplicates)
         self.accepted_rows_lbl.value = "{:,}".format(self.model.nrows_accepted)
 
-        # Update the bad labels overview table
+        # Update bad labels overview table
 
         _table_rows = ""
 
@@ -315,21 +320,20 @@ class View:
         # Calculate helper variables
         NCOLS = 5
         nrowsneeded = len(self.model.unknown_labels_overview_tbl)
-        nrowssupported = int(  # We deduct NCOLS from the calculation to exclude the header row
+        nrowssupported = int(  # We deduct NCOLS from calc to exclude header row
             (len(self._unknown_labels_tbl_cell_pool) - NCOLS) / NCOLS
         )
 
-        # Enlarge the children pool if needed
+        # Enlarge children pool if needed
         if nrowsneeded > nrowssupported:
 
-            # Create enough child cells to form the missing rows
-            # Note: each row in this table is in the form of [label, label, label, dropdown, checkbox]
+            # Create enough child cells to form missing rows, ea. row: [label, label, label, dropdown, checkbox]
             for row_index in range(nrowssupported, nrowsneeded):
-                # create a lambda that returns an onchange callback that can be assigned to ipywidgets dropdown
+                # create lambda that returns onchange callback assigned to ipywidgets dropdown
                 _get_dropdown_callback = lambda row_index: lambda change: self.ctrl.onchange_fix_dropdown(
                     change, row_index
                 )
-                # create a lambda returns an onchange callback that can be assigned to ipywidgets checkbox
+                # create lambda returns onchange callback assigned to ipywidgets checkbox
                 _get_checkbox_callback = lambda row_index: lambda change: self.ctrl.onchange_override_checkbox(
                     change, row_index
                 )
@@ -345,18 +349,21 @@ class View:
                     ui.Box(children=[checkbox]),
                 ]
 
-        # Update the values being displayed at each row
+        # Update values displayed at ea row
         for row_index in range(nrowsneeded):
-            # Get the cell widgets for this row
+
+            # Get cell widgets for row
             cellpoolstartindex = (row_index * NCOLS) + NCOLS  #  we add NCOLS to account for header row
             unknownlabel_w, associatedcolumn_w, closestmatch_w, fix_w, override_w = [
                 cell_wrapper.children[0]
                 for cell_wrapper in self._unknown_labels_tbl_cell_pool[cellpoolstartindex : cellpoolstartindex + 5]
             ]
-            # Get the cell values for this row from model
+            
+            # Get cell values for row from model
             row = self.model.unknown_labels_overview_tbl[row_index]
             unknownlabel, associatedcolumn, closestmatch, fix, override = row
-            # Update cell widgets based on the retrieved values from model
+            
+            # Update cell widgets based on retrieved values from model
             get_hoverable_html = lambda value: f"<span title={value}>{value}</span>"
             unknownlabel_w.value = get_hoverable_html(unknownlabel)
             associatedcolumn_w.value = associatedcolumn
@@ -381,14 +388,14 @@ class View:
             fix_w.value = fix
             override_w.value = override
 
-        # Assign the required rows to the table
+        # Assign required rows to table
         self.unknown_labels_tbl.children = self._unknown_labels_tbl_cell_pool[: (nrowsneeded + 1) * 5]
 
     def update_plausibility_checking_page(self):
-        # Update the style and visibility of tab elements and tab content
+        # Update style & visibility of tab elements & content
         is_active = lambda tab: self.model.active_visualization_tab == tab
 
-        # - update the style and visibility of value trends tab element & content
+        # - update style & visibility of value trends tab element & content
         if is_active(VisualizationTab.VALUE_TRENDS):
             self.valuetrends_tabelement.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
             self.valuetrends_tabcontent.remove_class(CSS.DISPLAY_MOD__NONE)
@@ -396,7 +403,7 @@ class View:
             self.valuetrends_tabelement.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
             self.valuetrends_tabcontent.add_class(CSS.DISPLAY_MOD__NONE)
 
-        # - update the style & visibility of growth trends tab element & content
+        # - update style & visibility of growth trends tab element & content
         if is_active(VisualizationTab.GROWTH_TRENDS):
             self.growthtrends_tabelement.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
             self.growthtrends_tabcontent.remove_class(CSS.DISPLAY_MOD__NONE)
@@ -404,7 +411,7 @@ class View:
             self.growthtrends_tabelement.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
             self.growthtrends_tabcontent.add_class(CSS.DISPLAY_MOD__NONE)
 
-        # Update the dropdown options and values in the value trends tab
+        # Update dropdown options & values in the value trends tab
         # - scenario dropdown
         set_dropdown_options(
             self.valuetrends_scenario_ddown, self.model.uploaded_scenarios, self.ctrl.onchange_valuetrends_scenario
@@ -420,7 +427,7 @@ class View:
             self.valuetrends_variable_ddown, self.model.uploaded_variables, self.ctrl.onchange_valuetrends_variable
         )
         self.valuetrends_variable_ddown.value = self.model.valuetrends_variable
-        # Update the dropdown options and values in the growth trends tab
+        # Update dropdown options & values in growth trends tab
         # - scenario dropdown
         set_dropdown_options(
             self.growthtrends_scenario_ddown, self.model.uploaded_scenarios, self.ctrl.onchange_growthtrends_scenario
@@ -438,7 +445,7 @@ class View:
         self.growthtrends_variable_ddown.value = self.model.growthtrends_variable
 
     def update_value_trends_chart(self):
-        # TODO: Fix legends possitioning issue
+        # TODO: Fix legends positioning problems
 
         with self.valuetrends_viz_output:
             clear_output(wait=True)
@@ -468,7 +475,7 @@ class View:
             plt.show()
 
     def update_growth_trends_chart(self):
-        # TODO: Fix legends possitioning issue
+        # TODO: Fix legends position problems
 
         with self.growthtrends_viz_output:
             clear_output(wait=True)
@@ -544,6 +551,7 @@ class View:
 
         # Create admin mode widgets
         self.admin_page = self._build_admin_page()
+        
         # Create app header
         self.user_mode_btn = ui.Button(description="User Mode")
         self.user_mode_btn.on_click(self.ctrl.onclick_user_mode_btn)
@@ -552,11 +560,13 @@ class View:
         self.app_title = ui.HTML(value=APP_TITLE)
         self.app_header = ui.Box(children=[self.app_title, self.user_mode_btn])
         self.app_header.add_class(CSS.HEADER_BAR)
+        
         # Create app body
         self.app_body = ui.VBox(  # vbox for app body
             children=[self.user_page_stepper, self.user_page_container],  # - page stepper, page container
             layout=ui.Layout(flex="1", align_items="center", padding="36px 48px"),
         )
+        
         # Create the app
         app = ui.VBox(  # vbox for app container
             children=[
@@ -569,30 +579,28 @@ class View:
         return app
 
     def _build_file_upload_page(self):
-        # Create the upload area component (or ua for short)
-        # - create the hidden file label
-        # - upon successful upload, our Javascript code will notify the backend code the name of the uploaded file by
-        # - modifying the value of this label widget    @ Aug 3, 2021
+        # Create upload area ("ua") component 
+        # - create hidden file label
+        # - on upload success, JS tells backend name of uploaded file by modifying value of label widget    
         self.ua_file_label = ui.Label(value="")
         self.ua_file_label.add_class(CSS.UA__FILE_LABEL)
         self.ua_file_label.observe(self.ctrl.onchange_ua_file_label, "value")
-        # - remember the model id of hidden file label
-        # - we will later inject this model id into the Javascript context, so that our Javascript code can find
-        # - and manipulate the value of this hidden label  @ Aug 3, 2021
-        # TODO: Remove the JSAppModel class and move its functionality to Model (to reduce the amount of abstractions)
+        # - remember model id of hidden file label
+        # - inject model id into JS context later so JS code finds can change value of this hidden label  
+        # TODO: Remove the JSAppModel class, move functionality to Model (reduces amt of abstractions)
         javascript_model = self.model.javascript_model
         javascript_model.ua_file_label_model_id = self.ua_file_label.model_id
-        # - create a box representing the upload area component
+        # - create box representing the upload area component
         upload_area = ui.Box(  # box representing the upload area component
             children=[
                 CSS.assign_class(
-                    ui.HBox(  # - hbox for the component's background widgets
+                    ui.HBox(  # - hbox for component's background widgets
                         children=[
-                            ui.HTML(  # -- first half of the upload instruction
+                            ui.HTML(  # -- first half of upload instruction
                                 value=f"""<strong class="{CSS.COLOR_MOD__BLUE}"">&#128206;&nbsp;
                                 Add a CSV file&nbsp;</strong>"""
                             ),
-                            ui.HTML(  # -- second half of the upload instruction
+                            ui.HTML(  # -- second half of upload instruction
                                 value=f'<div class="{CSS.COLOR_MOD__GREY}"">from your computer</div>'
                             ),
                         ]
@@ -600,8 +608,7 @@ class View:
                     CSS.UA__BACKGROUND,
                 ),
                 ui.HTML(  # - invisible file uploader (HTML input[type="file"])
-                    # NOTE: this widget will be targeted from the Javascript context by using the CSS class name,
-                    # so do not remove the CSS class assignment
+                    # NOTE widget targeted from JS context using CSS class name, don't remove CSS class assignment!
                     value=f"""
                     <input class="{CSS.UA__FILE_UPLOADER}" type="file" title="Click to browse" accept=".csv">
                     """
@@ -610,17 +617,19 @@ class View:
             ],
             layout=ui.Layout(margin="20px 0px"),
         )
+        
         upload_area.add_class(CSS.UA)
+
         # Create uploaded filename snackbar
-        # TODO: improve the logic for this snackbar display management
-        # - create a "snackbar" to show that no file has been uploaded
+        # TODO improve logic for snackbar display mgmt
+        # - create "snackbar" to show no file uploaded
         no_file_uploaded = ui.HTML(
             value=(
                 '<div style="width: 500px; line-height: 36px; text-align: center; background: rgba(75, 85, 99, 0.1);'
                 ' color: var(--grey);"> No file uploaded </div>'
             )
         )
-        # - create a snackbar to show the uploaded file's name
+        # - create snackbar to show uploaded file name
         uploaded_file_name = ui.Label(value="")
         x_button = ui.Button(icon="times")
         x_button.on_click(self.ctrl.onclick_remove_file)
@@ -632,22 +641,25 @@ class View:
         )
         uploaded_file_snackbar.add_class(CSS.FILENAME_SNACKBAR)
         uploaded_file_snackbar.add_class(CSS.DISPLAY_MOD__NONE)
-        # - create the box
+        # - create box
         self.uploaded_file_name_box = ui.Box(children=[no_file_uploaded, uploaded_file_snackbar])
         self.uploaded_file_name_box.layout = ui.Layout(margin="0px 0px 24px 0px")
+        
         # Create project selection widget
-        # TODO: change this to only allow single selection
+        # TODO: change to only allow single selection
         associatedprojects_select = ui.SelectMultiple(options=self.model.USER_GLOBALECON_PROJECTS)
         associatedprojects_select.observe(self.ctrl.onchange_associated_projects, "value")
         associatedprojects_select.layout = ui.Layout(margin="20px 0px 0px 0px", width="500px")
         associatedprojects_select.add_class(CSS.ASSOCIATED_PROJECT_SELECT)
+        
         # Create navigation button
         next_button = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
         next_button.on_click(self.ctrl.onclick_next_from_upage_1)
-        # Create the page
+        
+        # Create page
         return ui.VBox(  # vbox for page
             children=[
-                ui.VBox(  # - vbox for the page's main components
+                ui.VBox(  # - vbox for page main components
                     children=[
                         ui.HBox(  # -- hbox for file upload instruction & info download button
                             children=[
@@ -685,7 +697,7 @@ class View:
         )
 
     def _build_data_specification_page(self):
-        # - create control widgets for the input format specification section
+        # Create control widgets for input format spec section
         _control_layout = ui.Layout(flex="1 1", max_width="100%")
         self.model_name_ddown = ui.Dropdown(value="", options=[""], layout=_control_layout)
         self.model_name_ddown.observe(self.ctrl.onchange_model_name_dropdown, "value")
@@ -701,7 +713,8 @@ class View:
             continuous_update=False,
         )
         self.scenarios_to_ignore_txt.observe(self.ctrl.onchange_scenarios_to_ignore_text, "value")
-        # - create control widgets for the column assignment section
+        
+        # Create control widgets for col assign section
         self.model_name_lbl = ui.Label(value="")
         self.scenario_column_ddown = ui.Dropdown(value="", options=[""], layout=_control_layout)
         self.scenario_column_ddown.observe(self.ctrl.onchange_scenario_column_dropdown, "value")
@@ -717,27 +730,27 @@ class View:
         self.year_column_ddown.observe(self.ctrl.onchange_year_column_dropdown, "value")
         self.value_column_ddown = ui.Dropdown(value="", options=[""], layout=_control_layout)
         self.value_column_ddown.observe(self.ctrl.onchange_value_column_dropdown, "value")
-        # - create the input data preview table
-        # - TODO: implement this table with ipywidgets HTML
+        
+        # Create input data preview table TODO implement table w/ipywidgets HTML
         self._input_data_table_childrenpool = [
             ui.Box(children=[ui.Label(value="")]) for _ in range(33)  # Using 33 as cache size is random
         ]
         self.input_data_preview_tbl = ui.GridBox(
-            children=self._input_data_table_childrenpool[:24],  # 24 because we assume the table dimension to be
-            # 3 x 8 (the row number will stay the same, but the column number may vary)
+            children=self._input_data_table_childrenpool[:24],  # 24 b/c assume table dim is 3 x 8 (row num constant, but col num varies)
             layout=ui.Layout(grid_template_columns="repeat(8, 1fr)"),
         )
         self.input_data_preview_tbl.add_class(CSS.PREVIEW_TABLE)
-        # - create the output data preview table
-        # - TODO: implement this table with ipywidgets HTML
+
+        # Create output data preview table TODO implement table w/ipywidgets HTML
         self.output_data_preview_tbl = ui.GridBox(
             children=[
                 ui.Box(children=[ui.Label(value="")]) for _ in range(24)
-            ],  # 24 because of the 3 x 8 table dimension (invariant)
+            ],  # 24 b/c 3 x 8 table dim (invariant)
             layout=ui.Layout(grid_template_columns="repeat(8, 1fr"),
         )
         self.output_data_preview_tbl.add_class(CSS.PREVIEW_TABLE)
-        # - create control widgets for page navigation
+        
+        # Create control widgets for page navigation
         previous = ui.Button(
             description="Previous",
             layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px"),  # NOSONAR
@@ -745,12 +758,13 @@ class View:
         previous.on_click(self.ctrl.onclick_previous_from_upage_2)
         next_ = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
         next_.on_click(self.ctrl.onclick_next_from_upage_2)
-        # Create the input format specifications section
+        
+        # Create input format spec section
         _label_layout = ui.Layout(width="205px")
-        _wrapper_layout = ui.Layout(overflow_y="hidden")  # needed to prevent scrollbar from appearing on safari
-        input_format_specifications_section = ui.VBox(  # vbox for the section
+        _wrapper_layout = ui.Layout(overflow_y="hidden")  # prevents scrollbar from appearing on safari
+        input_format_specifications_section = ui.VBox(  # vbox for section
             children=[
-                ui.GridBox(  # - gridbox for all format specification widgets except for "Scenarios to ignore"
+                ui.GridBox(  # - gridbox for all format spec widgets except for "Scenarios to ignore"
                     children=(
                         ui.HBox(  # -- hbox for model name specs
                             children=(ui.Label(value="Model name *", layout=_label_layout), self.model_name_ddown),
@@ -760,14 +774,14 @@ class View:
                             children=(ui.Label(value="Delimiter *", layout=_label_layout), self.delimiter_ddown),
                             layout=_wrapper_layout,
                         ),
-                        ui.HBox(  # -- hbox for header is included specs
+                        ui.HBox(  # -- hbox for header included specs
                             children=(
                                 ui.Label(value="Header is included *", layout=_label_layout),
                                 self.header_is_included_chkbox,
                             ),
                             layout=_wrapper_layout,
                         ),
-                        ui.HBox(  # -- hbox for number of initial lines to skip specs
+                        ui.HBox(  # -- hbox for num initial lines to skip specs
                             children=(
                                 ui.Label(value="Number of initial lines to skip *", layout=_label_layout),
                                 self.lines_to_skip_txt,
@@ -787,18 +801,19 @@ class View:
             ],
             layout=ui.Layout(padding="8px 0px 16px 0px"),
         )
-        # Create the page
+
+        # Create page
         return ui.VBox(  # vbox for page
             children=(
-                ui.VBox(  # - vbox for the page's main components
+                ui.VBox(  # - vbox for page main components
                     children=(
                         ui.HTML(value="<b>Specify the format of the input data</b>"),  # -- input format specs title
-                        input_format_specifications_section,  # -- input format specification section
-                        ui.HTML(  # -- column assignment section title
+                        input_format_specifications_section,  # -- input format spec section
+                        ui.HTML(  # -- col assign section title
                             value="<b>Assign columns from the input data to the output data</b>"
                         ),
                         CSS.assign_class(
-                            ui.GridBox(  # -- gridbox representing the column assignment table
+                            ui.GridBox(  # -- col assign table
                                 children=(
                                     ui.Box(children=(ui.Label(value="Model"),)),
                                     ui.Box(children=(ui.Label(value="Scenario"),)),
@@ -836,9 +851,9 @@ class View:
 
     def _build_integrity_checking_page(self):
         """Build the integrity checking page"""
-        # Create the control widgets
+        # Create control widgets
         # - create row download buttons
-        # - we assume that the download paths are constant. else, the href values need to be updated during page update
+        # - assume download paths constant else href values must be updated during page update
         download_rows_field_issues_btn = ui.HTML(
             value=f"""
                 <a
@@ -920,10 +935,8 @@ class View:
         )
         self.bad_labels_tbl.add_class(CSS.BAD_LABELS_TABLE)
         # - create unknown labels table
-        # - this is an interactive table, so the build process is a little different. essentially, we are creating a
-        # - gridbox with a grey background and populating it with a bunch of boxes with a white background, making the
-        # - gridbox look like a table. @date Aug 3, 2021
-        # -- create the table's header row
+        # - interactive table, so build process is different: create gridbox w/grey bg,pop w/boxes w/white bg makingit look like table 
+        # -- create table's header row
         self._unknown_labels_tbl_cell_pool = [
             ui.Box(children=[ui.HTML(value="Label")]),
             ui.Box(children=[ui.HTML(value="Associated column")]),
@@ -931,25 +944,26 @@ class View:
             ui.Box(children=[ui.HTML(value="Fix")]),
             ui.Box(children=[ui.HTML(value="Override")]),
         ]
-        # -- create the table's content, row by row
-        # -- each row is in the format of [label, label, label, dropdown, checkbox]. to prevent us from having to
-        # -- recreate each cell widget every time there is a page update (which is slow and might cause memory leak
-        # -- in the browser) we create a pool of cell widgets and assign them as the gridbox's children.
-        # -- TODO: Create a pool of rows instead of a pool of cells, which is more convenient to manage
-        # -- @date Aug 3, 2021
+        # -- create table content row by row
+        #   -- ea row: [label, label, label, dropdown, checkbox] avoids
+        #   -- recreate ea cell widget at page update (slow, might cause memory leak in browser) 
+        #   -- create pool of cell widgets, assign as gridbox children
+        # TODO Create pool of rows instead of cells (more convenient)
+        
         initial_nrows_in_pool = 10
         ncolumns = 5
+
         for row_index in range(initial_nrows_in_pool):
             dropdown = ui.Dropdown()
-            # create a lambda that returns an onchange callback that can be assigned to an ipywidgets' dropdown
-            # we only have one onchange callback in Controller for all the dropdowns in this table and it
-            # requires the dropdown's row index as an argument. so, the onchange callback that our lambda returns will
-            # call the Controller's onchange callback and pass the appropriate row index. @date Aug 3, 2021
+            # Create lambda to return onchange callback assigned to ipywidgets' dropdown
+            # Only have 1 onchange callback in Controller for all dropdowns in table
+            #  - requires dropdown row index as arg so onchange callback lambda returns calls 
+            #    Controller's onchange callback & passes right row index 
             _get_dropdown_callback = lambda row_index_arg: lambda change: self.ctrl.onchange_fix_dropdown(
                 change, row_index_arg
             )
-            # create a lambda that returns an onchange callback that can be assigned to an ipywidgets' checkbox
-            # the reasoning for this lambda is the same as above. @date Aug 3, 2021
+            
+            # Create lambda to return onchange callback assigned to ipywidgets' checkbox since lambda same as above 
             _get_checkbox_callback = lambda row_index_arg: lambda change: self.ctrl.onchange_override_checkbox(
                 change, row_index_arg
             )
@@ -963,22 +977,25 @@ class View:
                 ui.Box(children=[dropdown]),
                 ui.Box(children=[checkbox]),
             ]
+
         initial_nrows_in_table = 4
         self.unknown_labels_tbl = ui.GridBox(
             children=self._unknown_labels_tbl_cell_pool[: initial_nrows_in_table * ncolumns]
         )
         self.unknown_labels_tbl.add_class(CSS.UNKNOWN_LABELS_TABLE)
-        # - create page navigation buttons
+        
+        # Create page nav buttons
         next_ = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
         next_.on_click(self.ctrl.onclick_next_from_upage_3)
         previous = ui.Button(
             description="Previous", layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px")
         )
         previous.on_click(self.ctrl.onclick_previous_from_upage_3)
-        # Create the page
+        
+        # Create page
         return ui.VBox(  # vbox for page
             children=(
-                ui.VBox(  # - vbox for the page's main components
+                ui.VBox(  # - vbox for page main components
                     children=(
                         ui.HTML(  # -- rows overview title
                             value='<b style="line-height:13px; margin-bottom:4px;">Rows overview</b>'
@@ -990,12 +1007,11 @@ class View:
                                 " rows can be downloaded to be analyzed.</span>"
                             )
                         ),
-                        ui.HBox(  # -- hbox for rows overview table and row download buttons
+                        ui.HBox(  # -- hbox for rows overview table & row download buttons
                             children=[
                                 CSS.assign_class(
                                     ui.GridBox(  # --- gridbox representing rows overview table
-                                        # TODO: representing this table using ipywidgets HTML might be better
-                                        # since the table is not interactive
+                                        # TODO table using ipywidgets HTML better since table not interactive?
                                         children=(
                                             ui.Box(
                                                 children=(
@@ -1177,11 +1193,11 @@ class View:
         # Create page
         return ui.VBox(  # vbox for page
             children=(
-                ui.VBox(  # - vbox for the page's main components
+                ui.VBox(  # - vbox for page main components
                     children=(
-                        ui.HBox(  # -- hbox for [page title & instruction] and visualization tab bar
+                        ui.HBox(  # -- hbox for [page title & instruction] & viz tab bar
                             children=[
-                                ui.VBox(  # --- vbox for the page title & instruction
+                                ui.VBox(  # --- vbox for page title & instruction
                                     children=[
                                         ui.HTML(  # ---- page title
                                             value=(

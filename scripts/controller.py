@@ -12,7 +12,7 @@ class Controller:
         """Load data, build UI"""
         self.view.display()
 
-        # NOTE: TO_DEBUG: Uncomment testing code below to avoid problems during jupyter lab debuging
+        # NOTE To debug ncomment testing code below, avoids problems during jupyter lab debuging
         # self.model.uploadedfile_name = 'globiom.csv'  # <-- Replace w/test input file name
         # self.view.show_notification(Notification.SUCCESS, Notification.FILE_UPLOAD_SUCCESS)
         # self.view.update_file_upload_page()
