@@ -28,6 +28,7 @@ class Model:
     DOWNLOADDIR_PATH = WORKINGDIR_PATH / "downloads"
     DATA_PROJ_ROOT = Path('/data/projects/')
     DATA_PROJ_SUBD = Path('files/')
+    PREFIX = 'agmipglobalecon'
 
     def __init__(self):
 
@@ -46,7 +47,7 @@ class Model:
             self.WORKINGDIR_PATH / "AgMIP GlobalEcon Data Submission Info.zip"
         )
         self.USER_GLOBALECON_PROJECTS = [
-            (dirname[len("agmipglobalecon"):], dirname) for dirname in get_user_globalecon_project_dirnames()
+            (dirname[len(self.PREFIX):], dirname) for dirname in get_user_globalecon_project_dirnames()
         ]  # - GlobalEcon projects user is part of
         self.uploadedfile_name = ""
         self.associated_project_dirnames = []  # - associated GlobalEcon projects for this submission
@@ -123,7 +124,7 @@ class Model:
     def get_submitted_files_info(self):
         """Return list of submitted files info."""
         dirnames = os.popen(f'ls {self.DATA_PROJ_ROOT}').read().split()
-        project_dirnames = [dirname for dirname in dirnames if dirname[:len("agmipglobalecon")] == "agmipglobalecon"]
+        project_dirnames = [dirname for dirname in dirnames if dirname[:len(self.PREFIX)] == self.PREFIX]
         files_info = []
 
         for project_dirname in project_dirnames:
@@ -350,7 +351,8 @@ class Model:
                 shutil.move(self.outputfile_path, current / (self.model_name + '.csv'))
 
                 # Create new data cube by merging csv files, removing duplicates    
-                os.system(f"cat {current / '*.csv'} | uniq > {project_files / 'merged.csv'}")
+                filename = project_dirname[len(self.PREFIX):] + '_merged.csv'
+                os.system(f"cat {current / '*.csv'} | uniq > {project_files / filename}")
 
     # Data spec page properties
     # NOTE See comment in constructor for reason for these props
