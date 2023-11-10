@@ -324,32 +324,33 @@ class Model:
         """Submit processed file to correct dir."""
 
         for project_dirname in self.associated_project_dirnames:
-            outputfile_dstpath = (
-                self.DATA_PROJ_ROOT / project_dirname / self.DATA_PROJ_SUBD / ".submissions" / ".pending" / self.outputfile_path.name
-
-                if self.overridden_labels > 0
-                else self.DATA_PROJ_ROOT / project_dirname / self.DATA_PROJ_SUBD / ".submissions" / self.outputfile_path.name
-            )
-
-            shutil.copy(self.outputfile_path, outputfile_dstpath)
-
-            # Submitfile detailing override request or create new data cube
+            project_files = self.DATA_PROJ_ROOT / project_dirname / self.DATA_PROJ_SUBD   
+            submissions = project_files / ".submissions"  
+            
             if self.overridden_labels > 0:
-                requestinfo_dstpath = outputfile_dstpath.parent / (outputfile_dstpath.stem + "_OverrideInfo.csv")
+                pending = submissions / ".pending"
 
-                with open(str(requestinfo_dstpath), "w+") as infofile:
+                # Move file to "pending" dir
+                shutil.move(self.outputfile_path, pending / self.outputfile_path.name)
+
+                # Create file detailing override request
+                with open(pending / (os.path.splitext(self.outputfile_path.name)[0] + "_OVERRIDES.csv"), "w+") as f:
 
                     for label_info in self.input_data_diagnosis.unknown_labels:
 
                         if label_info.override == True:
-                            line = f"{label_info.label},{label_info.associated_column},{label_info.closest_match}\n"
-                            infofile.write(line)
+                            f.write(f"{label_info.label},{label_info.associated_column},{label_info.closest_match}\n")
             else:
-                submissiondir_path = outputfile_dstpath.parent
-                submission_files_wildcard = str(submissiondir_path / "*.csv")
-                # Print content of all csv files, remove duplicates, redirect output to merged.csv
-                # TODO Ignore content of existing merged.csv when printing
-                os.system(f"cat {submission_files_wildcard} | uniq > merged.csv")
+                # Put copy of file in "submitted"      
+                shutil.copy(self.outputfile_path, submissions / self.outputfile_path.name)
+                
+                current = submissions / ".current"
+
+                # Move file to "current" dir renamed as model name
+                shutil.move(self.outputfile_path, current / (self.model_name + '.csv'))
+
+                # Create new data cube by merging csv files, removing duplicates    
+                os.system(f"cat {current / '*.csv'} | uniq > {project_files / 'merged.csv'}")
 
     # Data spec page properties
     # NOTE See comment in constructor for reason for these props

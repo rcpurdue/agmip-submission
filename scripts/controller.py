@@ -404,8 +404,8 @@ class Controller:
 
         if self.model.overridden_labels > 0:
             self.view.show_modal_dialog(
-                "Pending Submission Approval",
-                "Your file has been submitted, but it is being placed under review because it contains overridden "
-                "labels. Reach out to Dominique (vandermd@purdue.edu) about this submission so he can begin the "
-                "review process.",
+                "NOTE - Submission is PENDING:",
+                "Your file has been submitted and placed under review because it contains overridden labels." +
+                "It has NOT been merged with other data yet." +
+                "Please contact the project coordinator regarding the approval process for this submission.",
             )
