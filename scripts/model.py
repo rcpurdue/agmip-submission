@@ -350,9 +350,11 @@ class Model:
                 # Move file to "current" dir renamed as model name
                 shutil.move(self.outputfile_path, current / (self.model_name + '.csv'))
 
-                # Create new data cube by merging csv files, removing duplicates    
-                filename = project_dirname[len(self.PREFIX):] + '_merged.csv'
-                os.system(f"cat {current / '*.csv'} | uniq > {project_files / filename}")
+                # Create new data cube by merging csv files, removing duplicates - also remove any p files (uniques)    
+                csv_file = project_files / (project_dirname[len(self.PREFIX):] + '_merged.csv')
+                p_file = project_files / (project_dirname[len(self.PREFIX):] + '_merged.p')
+                os.system(f'echo "Model,Scenario,Region,Indicator,Sector,Unit,Year,Value" > {csv_file} && ' +
+                          f'cat {current / "*.csv"} | uniq >> {csv_file} && rm {p_file}')
 
     # Data spec page properties
     # NOTE See comment in constructor for reason for these props
