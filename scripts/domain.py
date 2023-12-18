@@ -960,7 +960,7 @@ class OutputDataEntity:
         #  - Shouldn't have recs w/any row issues 
         #  - But may still contain recs w/fixable field issues. 
         #  - Recs in this file shouldn't have additional or removed cols
-        processed_data = pd.read_csv(input_diagnosis.ACCEPTEDROWS_DSTPATH, delimiter=input_entity.delimiter, header=None, dtype=object) # type: ignore
+        processed_data = pd.read_csv(input_diagnosis.ACCEPTEDROWS_DSTPATH, delimiter=input_entity.delimiter, header=None, dtype=object, keep_default_na=False) # type: ignore
         
         # Make sure the data frame has all the required 8 columns (not more) in the correct arrangement
         colnames = processed_data.columns
